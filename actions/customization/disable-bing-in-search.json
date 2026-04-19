@@ -1,0 +1,64 @@
+{
+  "$schema": "../schemas/action.schema.json",
+  "id": "customization.disable-bing-in-search",
+  "version": "1.0.0",
+  "name": "Remove Bing from Windows Search",
+  "description": "Disables the Bing web-results integration in the Start and Search experience for the current user.",
+  "category": "customization",
+  "tags": ["privacy", "search", "start-menu"],
+  "icon": "search-off",
+  "author": "Hillpro",
+
+  "requirements": {
+    "elevation": "not-required",
+    "packageIdentity": "optional",
+    "minWindowsBuild": 22000,
+    "architectures": ["x64", "arm64"]
+  },
+
+  "execution": {
+    "mode": "sequential",
+    "steps": [
+      {
+        "id": "disable-bing",
+        "operation": "registry-set",
+        "hive": "HKCU",
+        "key":  "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+        "value": "BingSearchEnabled",
+        "type": "DWORD",
+        "data": 0,
+        "backupForUndo": true
+      },
+      {
+        "id": "disable-cortana-consent",
+        "operation": "registry-set",
+        "hive": "HKCU",
+        "key":  "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+        "value": "CortanaConsent",
+        "type": "DWORD",
+        "data": 0,
+        "backupForUndo": true
+      },
+      {
+        "id": "restart-searchui",
+        "operation": "process-kill",
+        "name": "SearchUI",
+        "continueOnError": true
+      }
+    ]
+  },
+
+  "undo": {
+    "supported": true,
+    "strategy": "automatic"
+  },
+
+  "dryRun": { "supported": false },
+
+  "localization": {
+    "fr": {
+      "name": "Retirer Bing de la recherche Windows",
+      "description": "Désactive l'intégration des résultats web Bing dans le menu Démarrer et la Recherche pour l'utilisateur courant."
+    }
+  }
+}

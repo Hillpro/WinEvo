@@ -1,0 +1,81 @@
+# Build output
+bin/
+obj/
+out/
+publish/
+BuildOutput/
+TestResults/
+
+# User-specific files
+*.user
+*.suo
+*.rsuser
+*.userosscache
+*.sln.docstates
+
+# Visual Studio
+.vs/
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# VS Code (keep shared tasks/launch if committed explicitly)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# MSIX / packaging output
+AppPackages/
+BundleArtifacts/
+GeneratedFiles/
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+
+# WiX / MSI
+*.wixobj
+*.wixpdb
+*.msi
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+.nuget/
+
+# .NET
+**/Properties/launchSettings.Local.json
+*.coverage
+*.coveragexml
+
+# Local dev settings & secrets
+appsettings.Local.json
+appsettings.Development.local.json
+*.local.json
+secrets.json
+*.pfx
+*.snk
+
+# Sysinternals — NOT redistributable, never commit
+SysinternalsSuite.zip
+tools/sysinternals/
+
+# Logs
+*.log
+Logs/
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Temp
+~$*
+*.tmp

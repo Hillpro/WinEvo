@@ -1,0 +1,75 @@
+{
+  "$schema": "../schemas/action.schema.json",
+  "id": "storage.wipe-free-space",
+  "version": "1.0.0",
+  "name": "Wipe free space",
+  "description": "Overwrites free space on the selected drive so that deleted files can no longer be recovered with forensic tools.",
+  "category": "storage",
+  "tags": ["privacy", "disk"],
+  "icon": "disk-wipe",
+  "author": "Hillpro",
+
+  "requirements": {
+    "elevation": "required",
+    "packageIdentity": "optional",
+    "minWindowsBuild": 22000,
+    "architectures": ["x64", "arm64"]
+  },
+
+  "warnings": [
+    { "severity": "warning", "key": "storage.wipe.longRunning" },
+    { "severity": "info",    "key": "storage.wipe.destructiveHint" }
+  ],
+
+  "parameters": [
+    {
+      "id": "drive",
+      "type": "drive",
+      "name": "Drive",
+      "required": true,
+      "filter": { "driveType": ["fixed", "removable"] }
+    }
+  ],
+
+  "preconditions": [
+    { "type": "driveHasFreeSpace", "drive": "{{params.drive}}", "minMegabytes": 100 }
+  ],
+
+  "execution": {
+    "mode": "sequential",
+    "createRestorePoint": false,
+    "steps": [
+      {
+        "id": "cipher-wipe",
+        "operation": "external-process",
+        "path": "%SystemRoot%\\System32\\cipher.exe",
+        "args": ["/w:{{params.drive}}"],
+        "timeout": null,
+        "progress": { "type": "indeterminate" }
+      }
+    ]
+  },
+
+  "undo": {
+    "supported": false,
+    "reason": { "key": "undo.irreversible" }
+  },
+
+  "dryRun": {
+    "supported": true,
+    "preview": {
+      "key": "dryrun.storage.wipe",
+      "tokens": { "drive": "{{params.drive}}" }
+    }
+  },
+
+  "localization": {
+    "fr": {
+      "name": "Effacer l'espace libre",
+      "description": "Écrase l'espace libre du disque sélectionné afin que les fichiers supprimés ne puissent plus être récupérés avec des outils forensiques.",
+      "parameters": {
+        "drive": { "name": "Disque" }
+      }
+    }
+  }
+}

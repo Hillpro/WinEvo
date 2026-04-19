@@ -1,0 +1,71 @@
+# Architecture
+
+## Processes
+
+WinEvo runs as **up to four processes**, split by privilege level and UI needs.
+
+```
+┌───────────────────────────────┐         ┌───────────────────────────────┐
+│       WinEvo.Shell.exe        │         │        WinEvo.Tray.exe        │
+│         (WinUI 3, user)       │         │        (WinForms, user)       │
+│     main UI, launched on      │◄──────► │     tray icon, autostart      │
+│     demand, fully exits on    │   IPC   │     when background is on     │
+│     close                     │         │                               │
+└──────────────┬────────────────┘         └──────────────┬────────────────┘
+               │                                         │
+               │             named pipes + gRPC          │
+               ▼                                         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         WinEvo.Agent.exe                                │
+│   --service  → runs as a Windows Service (LocalSystem), persistent      │
+│   --broker   → runs as UAC-elevated user session process, ephemeral     │
+│                                                                         │
+│   Same binary; same IPC surface. Mode selected at install / launch time │
+│   based on the user's "allow background execution" setting.             │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why split Shell and Tray into different processes
+
+WinUI 3 has a significant working-set cost (~150–300 MB). When the user closes the main window we want the process to **actually exit** — not linger in the background. A separate ~25 MB WinForms tray process owns the tray icon, relaunches the Shell on demand, and relays running-task status from the agent. This costs ~25 MB resident instead of ~250 MB.
+
+### Why one agent binary in two modes
+
+Users who enable background execution get a persistent Windows Service that can run long actions while the UI is closed. Users who opt out get an on-demand broker that UAC-prompts once per elevated batch and exits when idle. Both behaviors reuse the exact same execution code — there is no "service version" and "broker version" of each action. The binary reads its startup mode from command-line args; everything above that is identical.
+
+## IPC
+
+Named pipe + gRPC. See [ipc-contract.md](ipc-contract.md) for the protocol and security model.
+
+- **Service mode pipe:** `\\.\pipe\WinEvo.Agent.System`, ACL grants LocalSystem + the interactive user SID.
+- **Broker mode pipe:** `\\.\pipe\WinEvo.Agent.User.{sessionId}`, ACL grants only the interactive user SID.
+- **Client verification:** agent resolves the client PID via `GetNamedPipeClientProcessId` and verifies the client executable's Authenticode signature before accepting commands.
+
+## Action model
+
+Actions are declarative JSON manifests composed from a closed set of **operations** (registry, external-process, service control, etc.) and/or **sub-action** references to other manifests. See [action-authoring.md](action-authoring.md) for the schema and examples.
+
+Community extensibility lives at the **manifest** level — anyone can write a JSON action and drop it into `%LOCALAPPDATA%\WinEvo\Actions\`. Extending the operation set (adding fundamentally new trusted-code operations to the agent) requires a code-level PR and review; this is the security boundary.
+
+## Distribution
+
+Two distribution channels, both driven by the same source tree:
+
+1. **Microsoft Store** — MSIX package containing `WinEvo.Shell.exe` and `WinEvo.Tray.exe`. The agent MSI is bundled inside the MSIX and launched via UAC on first elevated action.
+2. **Unpackaged / portable** — a zip containing Shell, Tray, agent MSI, and the WinUI 3 bootstrapper. First-run flow is identical to the Store path.
+
+The agent is **always** installed via MSI (never as part of the MSIX payload), because Microsoft Store certification does not allow packaged apps to silently register privileged Windows Services.
+
+## Safety model
+
+See [security-model.md](security-model.md) for the full treatment. In brief:
+
+- Elevation is opt-in per action. Non-elevated actions never touch the agent.
+- Every destructive operation supports **undo** with state backup in `%ProgramData%\WinEvo\UndoStore\`.
+- Restore points are opt-in per action manifest, not a default.
+- Dry-run preview is opt-in per action manifest.
+- All executions are logged to `%ProgramData%\WinEvo\Logs\executions.jsonl` for audit + undo discovery.
+
+## Project layout
+
+See the top-level [README.md](../README.md) and solution file for the canonical project structure. Dependency flow is strictly acyclic: `Contracts` → `ActionModel` → `Actions.Abstractions` → `Actions.Operations` → `Agent.Core` → `Agent`, with `Ipc` sitting beside `Contracts`, and `Shell.Core` / `Shell` / `Tray` consuming `Contracts` + `Ipc` only (no direct reference to agent internals).

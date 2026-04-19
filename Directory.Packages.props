@@ -1,0 +1,56 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!--
+    Central Package Management — all package versions declared here.
+    Individual csproj files reference packages without a Version attribute.
+    Versions reflect the .NET 10 / Windows App SDK ecosystem as of 2026-04-19.
+    Update deliberately; bumps should be reviewed for breaking changes.
+  -->
+  <ItemGroup Label="Microsoft platform">
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1721" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.EventLog" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.6" />
+    <PackageVersion Include="System.ServiceProcess.ServiceController" Version="10.0.6" />
+    <PackageVersion Include="System.Management" Version="10.0.6" />
+  </ItemGroup>
+
+  <ItemGroup Label="MVVM">
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup Label="gRPC / IPC">
+    <PackageVersion Include="Grpc.AspNetCore" Version="2.76.0" />
+    <PackageVersion Include="Grpc.Net.Client" Version="2.76.0" />
+    <PackageVersion Include="Grpc.Tools" Version="2.80.0" />
+    <PackageVersion Include="Google.Protobuf" Version="3.34.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Serialization / schema">
+    <PackageVersion Include="System.Text.Json" Version="10.0.6" />
+    <PackageVersion Include="YamlDotNet" Version="17.0.1" />
+    <PackageVersion Include="JsonSchema.Net" Version="9.2.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Installer">
+    <PackageVersion Include="WixToolset.Sdk" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>
