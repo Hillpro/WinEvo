@@ -1,15 +1,21 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using WinEvo.Ipc;
 
 namespace WinEvo.Shell.Core.Services;
 
 /// <summary>
-/// Spawns the agent broker as a child process and connects a pipe client.
-/// TODO: UAC-elevated launch (<c>runas</c> verb) when an action declares
-/// <c>elevation: required</c>; currently the broker runs as the current user.
+/// Spawns the agent broker as a child process and owns its pipe client.
+/// Supports launching as a normal user process (default) or via the UAC
+/// <c>runas</c> verb when an action declares <c>elevation: required</c>.
+/// Elevation is lazy — the Shell starts unelevated and upgrades on demand
+/// via <see cref="EnsureElevatedAsync"/>.
 /// </summary>
 public sealed class AgentLauncher : IAsyncDisposable
 {
+    private const int UacCancelledHResult = 1223;
+    private static readonly TimeSpan s_connectionTimeout = TimeSpan.FromSeconds(15);
+
     private readonly string _agentExePath;
     private Process? _process;
     private PipeAgentClient? _client;
@@ -19,103 +25,188 @@ public sealed class AgentLauncher : IAsyncDisposable
         _agentExePath = agentExePath;
     }
 
+    /// <summary>Connected client; <see langword="null"/> before <see cref="StartAsync"/> has run or after disposal.</summary>
     public IAgentClient? Client => _client;
 
-    public async Task<IAgentClient> StartAsync(CancellationToken ct)
+    /// <summary>Whether the current broker was launched with elevation.</summary>
+    public bool IsElevated { get; private set; }
+
+    /// <summary>Last handshake response from the broker, cached for UI display.</summary>
+    public HandshakeResponse? LastHandshake { get; private set; }
+
+    /// <summary>Raised whenever the broker is (re)started or disposed, so UI can refresh status.</summary>
+    public event Action? StateChanged;
+
+    /// <summary>
+    /// Launch a fresh broker process and connect to its pipe. Fails cleanly if
+    /// the process can't start or the user cancels UAC.
+    /// </summary>
+    public async Task<IAgentClient> StartAsync(bool elevated = false, CancellationToken ct = default)
     {
         if (!File.Exists(_agentExePath))
             throw new FileNotFoundException($"agent executable not found at '{_agentExePath}'");
 
+        Process? process = null;
+        PipeAgentClient? client = null;
+        try
+        {
+            process = StartProcess(elevated);
+            client = new PipeAgentClient(PipeNames.UserBroker);
+            await ConnectWithRetriesAsync(client, process, ct).ConfigureAwait(false);
+            var handshake = await client.HandshakeAsync(ct).ConfigureAwait(false);
+
+            // Commit state only after all three succeeded.
+            _process = process;
+            _client = client;
+            IsElevated = elevated;
+            LastHandshake = handshake;
+            StateChanged?.Invoke();
+            return client;
+        }
+        catch
+        {
+            if (client is not null)
+                await client.DisposeAsync().ConfigureAwait(false);
+            TryKill(process);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Ensure an elevated broker is running. No-op when the current broker is
+    /// already elevated and connected. Otherwise tears down the existing
+    /// unelevated broker and launches a fresh elevated one (UAC prompt). If
+    /// the user declines UAC, the original unelevated broker is restarted so
+    /// non-elevated actions keep working, and <see cref="ElevationCancelledException"/>
+    /// is thrown.
+    /// </summary>
+    public async Task<IAgentClient> EnsureElevatedAsync(CancellationToken ct)
+    {
+        if (IsElevated && _client is { IsConnected: true })
+            return _client;
+
+        await TearDownAsync().ConfigureAwait(false);
+
+        try
+        {
+            return await StartAsync(elevated: true, ct).ConfigureAwait(false);
+        }
+        catch (ElevationCancelledException)
+        {
+            // Best-effort recovery: bring the unelevated broker back so the UI
+            // keeps working for non-elevated actions. If recovery also fails,
+            // callers will see no connected client and surface that separately.
+            try { await StartAsync(elevated: false, ct).ConfigureAwait(false); }
+            catch { /* swallowed — original cancel is the primary error */ }
+            throw;
+        }
+    }
+
+    private Process StartProcess(bool elevated)
+    {
         var psi = new ProcessStartInfo
         {
             FileName = _agentExePath,
             Arguments = "--broker",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
         };
 
-        _process = Process.Start(psi)
-            ?? throw new InvalidOperationException($"failed to start agent process '{_agentExePath}'");
+        if (elevated)
+        {
+            // UseShellExecute is required to trigger a UAC prompt via the runas
+            // verb, and it's mutually exclusive with stdout/stderr redirection.
+            // Paired with WinExe in the agent csproj to ensure no console window.
+            psi.UseShellExecute = true;
+            psi.Verb = "runas";
+            psi.WindowStyle = ProcessWindowStyle.Hidden;
+        }
+        else
+        {
+            psi.UseShellExecute = false;
+            psi.CreateNoWindow = true;
+        }
 
-        _client = new PipeAgentClient(PipeNames.UserBroker);
+        try
+        {
+            return Process.Start(psi)
+                ?? throw new InvalidOperationException($"Process.Start returned null for '{_agentExePath}'");
+        }
+        catch (Win32Exception ex) when (elevated && ex.NativeErrorCode == UacCancelledHResult)
+        {
+            throw new ElevationCancelledException("User declined the elevation prompt.", ex);
+        }
+    }
 
-        // Agent needs a moment to open the server pipe; retry with a short budget.
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(15);
+    private static async Task ConnectWithRetriesAsync(PipeAgentClient client, Process process, CancellationToken ct)
+    {
+        var deadline = DateTime.UtcNow + s_connectionTimeout;
         Exception? lastError = null;
+
         while (DateTime.UtcNow < deadline)
         {
             ct.ThrowIfCancellationRequested();
             try
             {
-                await _client.ConnectAsync(TimeSpan.FromSeconds(1), ct).ConfigureAwait(false);
-                return _client;
+                await client.ConnectAsync(TimeSpan.FromSeconds(1), ct).ConfigureAwait(false);
+                return;
             }
             catch (TimeoutException ex) { lastError = ex; }
             catch (IOException ex) { lastError = ex; }
+            catch (UnauthorizedAccessException ex) { lastError = ex; }
 
-            if (_process.HasExited)
-                throw new InvalidOperationException($"agent exited prematurely with code {_process.ExitCode}");
+            if (HasExited(process))
+                throw new InvalidOperationException($"agent exited prematurely");
 
             await Task.Delay(200, ct).ConfigureAwait(false);
         }
 
-        throw new TimeoutException($"could not connect to agent pipe within 15s ({lastError?.Message})");
+        throw new TimeoutException($"could not connect to agent pipe within {s_connectionTimeout.TotalSeconds}s ({lastError?.Message})");
     }
 
-    public async ValueTask DisposeAsync()
+    private static bool HasExited(Process process)
+    {
+        // For elevated children launched by an unelevated parent, HasExited can
+        // throw due to limited access. Treat "can't tell" as "still running".
+        try { return process.HasExited; }
+        catch { return false; }
+    }
+
+    private static void TryKill(Process? process)
+    {
+        if (process is null) return;
+        try
+        {
+            if (!HasExited(process))
+                process.Kill(entireProcessTree: true);
+        }
+        catch { /* best-effort */ }
+        finally
+        {
+            try { process.Dispose(); } catch { /* best-effort */ }
+        }
+    }
+
+    private async Task TearDownAsync()
     {
         if (_client is not null)
         {
             await _client.DisposeAsync().ConfigureAwait(false);
             _client = null;
         }
-
-        if (_process is not null)
-        {
-            try
-            {
-                if (!_process.HasExited)
-                {
-                    _process.Kill(entireProcessTree: true);
-                    await _process.WaitForExitAsync().ConfigureAwait(false);
-                }
-            }
-            catch { /* best-effort */ }
-            _process.Dispose();
-            _process = null;
-        }
+        TryKill(_process);
+        _process = null;
+        IsElevated = false;
+        LastHandshake = null;
+        StateChanged?.Invoke();
     }
 
-    private static readonly string[] s_devAgentSubpath =
+    public async ValueTask DisposeAsync()
     {
-        "src", "WinEvo.Agent", "bin", "Debug", "net10.0-windows10.0.22000.0",
-    };
+        await TearDownAsync().ConfigureAwait(false);
+    }
 
     /// <summary>
-    /// Locates <c>WinEvo.Agent.exe</c> in the Shell's base directory, falling back
-    /// to walking up to a sibling project output for "dotnet run" dev scenarios.
+    /// Path to the agent executable as deployed next to the Shell.
     /// </summary>
     public static string ResolveDefaultAgentPath()
-    {
-        var primary = Path.Combine(AppContext.BaseDirectory, "WinEvo.Agent.exe");
-        if (File.Exists(primary))
-            return primary;
-
-        return FindInRepo("WinEvo.Agent.exe", s_devAgentSubpath) ?? primary;
-    }
-
-    private static string? FindInRepo(string fileName, string[] subpath)
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, Path.Combine(subpath), fileName);
-            if (File.Exists(candidate))
-                return candidate;
-            dir = dir.Parent;
-        }
-        return null;
-    }
+        => Path.Combine(AppContext.BaseDirectory, "WinEvo.Agent.exe");
 }

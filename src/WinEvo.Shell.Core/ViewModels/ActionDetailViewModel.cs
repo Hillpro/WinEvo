@@ -10,21 +10,22 @@ namespace WinEvo.Shell.Core.ViewModels;
 
 /// <summary>
 /// Right-pane VM: shows the selected action, hosts parameter inputs, and exposes
-/// the <see cref="ExecuteCommand"/>. Displays step-result summary inline.
-/// TODO: streaming progress events from the agent.
+/// the <see cref="ExecuteCommand"/>. Ensures the agent is elevated when the
+/// action declares <c>elevation: required</c>. Displays step-result summary
+/// inline. TODO: streaming progress events from the agent.
 /// </summary>
 public sealed partial class ActionDetailViewModel : ObservableObject
 {
-    private readonly Func<IAgentClient?> _agentAccessor;
+    private readonly AgentLauncher _agentLauncher;
     private readonly DispatcherQueue _dispatcher;
 
     public ActionDetailViewModel(
         ActionItemViewModel item,
         string? language,
-        Func<IAgentClient?> agentAccessor,
+        AgentLauncher agentLauncher,
         DispatcherQueue dispatcher)
     {
-        _agentAccessor = agentAccessor;
+        _agentLauncher = agentLauncher;
         _dispatcher = dispatcher;
         Item = item;
         Language = language;
@@ -50,13 +51,6 @@ public sealed partial class ActionDetailViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanExecute))]
     private async Task ExecuteAsync(CancellationToken ct)
     {
-        var agent = _agentAccessor();
-        if (agent is null || !agent.IsConnected)
-        {
-            Status = "Agent not connected";
-            return;
-        }
-
         var missingRequired = Parameters
             .Where(p => p.Required && string.IsNullOrWhiteSpace(p.Value))
             .ToList();
@@ -67,15 +61,21 @@ public sealed partial class ActionDetailViewModel : ObservableObject
         }
 
         IsRunning = true;
-        Status = "Running…";
+        Status = null;
         ResultDetail = null;
 
         try
         {
+            var client = await ResolveClientAsync(ct).ConfigureAwait(false);
+            if (client is null)
+                return;
+
+            await RunOnUiAsync(() => Status = "Running…").ConfigureAwait(false);
+
             var manifestJson = JsonNode.Parse(ManifestToJson(Item.Manifest)) ?? new JsonObject();
             var paramDict = Parameters.ToDictionary(p => p.Id, p => p.ToJsonValue());
 
-            var response = await agent.ExecuteAsync(manifestJson, paramDict, ct).ConfigureAwait(false);
+            var response = await client.ExecuteAsync(manifestJson, paramDict, ct).ConfigureAwait(false);
 
             await RunOnUiAsync(() =>
             {
@@ -109,6 +109,39 @@ public sealed partial class ActionDetailViewModel : ObservableObject
         {
             await RunOnUiAsync(() => IsRunning = false).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Returns the agent client to use for this execution, prompting for UAC
+    /// elevation when the selected action requires it. Updates <see cref="Status"/>
+    /// and returns <see langword="null"/> when the user cancels UAC or no agent
+    /// is reachable.
+    /// </summary>
+    private async Task<IAgentClient?> ResolveClientAsync(CancellationToken ct)
+    {
+        var requiresElevation = Item.Manifest.Requirements.Elevation == ElevationRequirement.Required;
+
+        if (requiresElevation && !_agentLauncher.IsElevated)
+        {
+            await RunOnUiAsync(() => Status = "Waiting for elevation…").ConfigureAwait(false);
+            try
+            {
+                return await _agentLauncher.EnsureElevatedAsync(ct).ConfigureAwait(false);
+            }
+            catch (ElevationCancelledException)
+            {
+                await RunOnUiAsync(() => Status = "Elevation was declined. Action not executed.").ConfigureAwait(false);
+                return null;
+            }
+        }
+
+        var client = _agentLauncher.Client;
+        if (client is null || !client.IsConnected)
+        {
+            await RunOnUiAsync(() => Status = "Agent not connected.").ConfigureAwait(false);
+            return null;
+        }
+        return client;
     }
 
     private bool CanExecute() => !IsRunning;

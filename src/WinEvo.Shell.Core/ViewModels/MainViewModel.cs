@@ -2,15 +2,15 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
-using WinEvo.ActionModel;
+using WinEvo.Ipc;
 using WinEvo.Shell.Core.Services;
 
 namespace WinEvo.Shell.Core.ViewModels;
 
 /// <summary>
-/// Top-level VM for the Shell's main window. Owns the action catalog, the
-/// current selection, and the detail VM. Agent connection is lazy and
-/// reported via <see cref="AgentStatus"/>.
+/// Top-level VM for the Shell's main window. Owns the action catalog and the
+/// current selection; delegates agent lifetime/elevation to <see cref="AgentLauncher"/>
+/// and reflects its state via <see cref="AgentStatus"/>.
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject
 {
@@ -18,7 +18,6 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly AgentLauncher _agentLauncher;
     private readonly string? _language;
     private readonly DispatcherQueue _dispatcher;
-    private IAgentClient? _agentClient;
 
     public MainViewModel(ActionCatalog catalog, AgentLauncher agentLauncher, string? language, DispatcherQueue dispatcher)
     {
@@ -26,6 +25,7 @@ public sealed partial class MainViewModel : ObservableObject
         _agentLauncher = agentLauncher;
         _language = language;
         _dispatcher = dispatcher;
+        _agentLauncher.StateChanged += OnAgentStateChanged;
     }
 
     public ObservableCollection<ActionItemViewModel> Actions { get; } = new();
@@ -43,7 +43,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Detail = value is null
             ? null
-            : new ActionDetailViewModel(value, _language, () => _agentClient, _dispatcher);
+            : new ActionDetailViewModel(value, _language, _agentLauncher, _dispatcher);
     }
 
     [RelayCommand]
@@ -61,11 +61,8 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             await RunOnUiAsync(() => AgentStatus = "Starting agent…").ConfigureAwait(false);
-            _agentClient = await _agentLauncher.StartAsync(ct).ConfigureAwait(false);
-            var handshake = await _agentClient.HandshakeAsync(ct).ConfigureAwait(false);
-            await RunOnUiAsync(() =>
-                AgentStatus = $"Connected — agent {handshake.AgentVersion}, {handshake.SupportedOperations.Count} operations"
-            ).ConfigureAwait(false);
+            await _agentLauncher.StartAsync(elevated: false, ct).ConfigureAwait(false);
+            // OnAgentStateChanged fires from StartAsync and updates AgentStatus.
         }
         catch (Exception ex)
         {
@@ -73,7 +70,19 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>Marshals <paramref name="action"/> to the UI dispatcher and completes when it has run.</summary>
+    private void OnAgentStateChanged()
+    {
+        _dispatcher.TryEnqueue(() => AgentStatus = FormatStatus(_agentLauncher.LastHandshake, _agentLauncher.IsElevated));
+    }
+
+    private static string FormatStatus(HandshakeResponse? handshake, bool elevated)
+    {
+        if (handshake is null)
+            return "Not connected";
+        var badge = elevated ? " (elevated)" : "";
+        return $"Connected — agent {handshake.AgentVersion}, {handshake.SupportedOperations.Count} operations{badge}";
+    }
+
     private Task RunOnUiAsync(Action action)
     {
         if (_dispatcher.HasThreadAccess)

@@ -1,5 +1,5 @@
-using CommunityToolkit.Mvvm.ComponentModel;
 using System.Text.Json.Nodes;
+using CommunityToolkit.Mvvm.ComponentModel;
 using WinEvo.ActionModel;
 
 namespace WinEvo.Shell.Core.ViewModels;

@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <!-- WinExe (not Exe): suppresses the console window that would otherwise appear
+         when the agent is launched with UseShellExecute=true + runas for UAC.
+         Logs go to %TEMP%\winevo-agent.log via AgentLog, not stdout. -->
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
     <RootNamespace>WinEvo.Agent</RootNamespace>
     <AssemblyName>WinEvo.Agent</AssemblyName>

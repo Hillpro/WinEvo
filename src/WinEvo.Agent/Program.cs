@@ -1,3 +1,4 @@
+using System.Security.Principal;
 using WinEvo.Agent.Core;
 using WinEvo.Ipc;
 
@@ -17,14 +18,26 @@ internal static class Program
     {
         var mode = ParseMode(args);
 
+        using var identity = WindowsIdentity.GetCurrent();
+        var elevated = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        AgentLog.Write($"agent started — mode={mode}, elevated={elevated}, args=[{string.Join(' ', args)}]");
+
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-        return mode switch
+        try
         {
-            AgentMode.Broker => await RunBrokerAsync(cts.Token).ConfigureAwait(false),
-            _ => Fail($"mode '{mode}' not implemented yet"),
-        };
+            return mode switch
+            {
+                AgentMode.Broker => await RunBrokerAsync(cts.Token).ConfigureAwait(false),
+                _ => Fail($"mode '{mode}' not implemented yet"),
+            };
+        }
+        catch (Exception ex)
+        {
+            AgentLog.WriteException("fatal in Main", ex);
+            return 1;
+        }
     }
 
     private static async Task<int> RunBrokerAsync(CancellationToken ct)
