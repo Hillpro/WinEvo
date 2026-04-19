@@ -1,8 +1,10 @@
 # IPC contract
 
+> **Current runtime status:** the Shell ↔ Agent link is implemented as **length-prefixed JSON messages over a named pipe** (see [`WinEvo.Ipc/PipeFraming.cs`](../src/WinEvo.Ipc/PipeFraming.cs) and [`PipeMessages.cs`](../src/WinEvo.Ipc/PipeMessages.cs)). The gRPC contract described below is the **target design** — the `.proto` already lives in [`WinEvo.Contracts/Protos/agent-service.proto`](../src/WinEvo.Contracts/Protos/agent-service.proto) and the `Grpc.Tools` package generates client + server stubs at build time, but neither end hosts/consumes the generated code yet. Everything else in this document (pipe naming, ACLs, client authentication, handshake/versioning semantics) applies to both the JSON and the future gRPC transport.
+
 ## Transport
 
-gRPC over a named pipe, using `Grpc.Net.Client.ConnectCallback` on the client side to open the pipe and `Grpc.AspNetCore` on the server side hosting inside the agent via `Microsoft.Extensions.Hosting`.
+Target: gRPC over a named pipe, using `Grpc.Net.Client.ConnectCallback` on the client side to open the pipe and `Grpc.AspNetCore` on the server side hosting inside the agent via `Microsoft.Extensions.Hosting`.
 
 ## Pipe naming & ACL
 

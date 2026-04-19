@@ -22,8 +22,7 @@
       {
         "id": "disable-bing",
         "operation": "registry-set",
-        "hive": "HKCU",
-        "key":  "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+        "key":  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
         "value": "BingSearchEnabled",
         "type": "DWORD",
         "data": 0,
@@ -32,8 +31,7 @@
       {
         "id": "disable-cortana-consent",
         "operation": "registry-set",
-        "hive": "HKCU",
-        "key":  "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+        "key":  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
         "value": "CortanaConsent",
         "type": "DWORD",
         "data": 0,

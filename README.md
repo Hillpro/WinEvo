@@ -41,7 +41,7 @@ Four processes, one agent binary with two modes:
 
 | Process | Tech | Elevation | Purpose |
 |---|---|---|---|
-| `WinEvo.Shell.exe` | WinUI 3 | user | Main UI. Fully exits when closed. |
+| `WinEvo.exe` | WinUI 3 | user | Main UI. Fully exits when closed. |
 | `WinEvo.Tray.exe` | WinForms | user | Tray icon; persists when background is enabled. |
 | `WinEvo.Agent.exe --service` | .NET console | LocalSystem | Persistent elevated actions (opt-in). |
 | `WinEvo.Agent.exe --broker` | *same binary* | UAC-elevated | Ephemeral fallback when service is off. |

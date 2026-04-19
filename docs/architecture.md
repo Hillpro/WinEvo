@@ -6,7 +6,7 @@ WinEvo runs as **up to four processes**, split by privilege level and UI needs.
 
 ```
 ┌───────────────────────────────┐         ┌───────────────────────────────┐
-│       WinEvo.Shell.exe        │         │        WinEvo.Tray.exe        │
+│           WinEvo.exe          │         │        WinEvo.Tray.exe        │
 │         (WinUI 3, user)       │         │        (WinForms, user)       │
 │     main UI, launched on      │◄──────► │     tray icon, autostart      │
 │     demand, fully exits on    │   IPC   │     when background is on     │
@@ -51,7 +51,7 @@ Community extensibility lives at the **manifest** level — anyone can write a J
 
 Two distribution channels, both driven by the same source tree:
 
-1. **Microsoft Store** — MSIX package containing `WinEvo.Shell.exe` and `WinEvo.Tray.exe`. The agent MSI is bundled inside the MSIX and launched via UAC on first elevated action.
+1. **Microsoft Store** — MSIX package containing `WinEvo.exe` and `WinEvo.Tray.exe`. The agent MSI is bundled inside the MSIX and launched via UAC on first elevated action.
 2. **Unpackaged / portable** — a zip containing Shell, Tray, agent MSI, and the WinUI 3 bootstrapper. First-run flow is identical to the Store path.
 
 The agent is **always** installed via MSI (never as part of the MSIX payload), because Microsoft Store certification does not allow packaged apps to silently register privileged Windows Services.

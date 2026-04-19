@@ -2,8 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+    <TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
     <RootNamespace>WinEvo.Shell</RootNamespace>
     <!-- Output exe is WinEvo.exe (consumer-app naming); project folder stays WinEvo.Shell. -->
@@ -11,6 +10,10 @@
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WinUI 3 patterns fight these two analyzers:
+         CA1822: x:Bind binding helpers are instance methods by design.
+         CA1001: Application cannot implement IDisposable; we dispose via Window.Closed. -->
+    <NoWarn>$(NoWarn);CA1822;CA1001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,6 +24,35 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WinEvo.Shell.Core\WinEvo.Shell.Core.csproj" />
+
+    <!-- Build-order-only reference so the agent exe is ready before we try to copy it. -->
+    <ProjectReference Include="..\WinEvo.Agent\WinEvo.Agent.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ship the built-in action manifests next to the Shell. -->
+    <Content Include="..\..\actions\**\*.json" LinkBase="actions">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Copy WinEvo.Agent.exe (and its runtime files) into the Shell output directory
+       so AgentLauncher can spawn it as a sibling process. -->
+  <Target Name="CopyAgentBinaries" AfterTargets="Build">
+    <PropertyGroup>
+      <AgentOutputDir>$(MSBuildProjectDirectory)\..\WinEvo.Agent\bin\$(Configuration)\net10.0-windows10.0.22000.0\</AgentOutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <AgentFiles Include="$(AgentOutputDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(AgentFiles)"
+          DestinationFolder="$(OutputPath)%(RecursiveDir)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(AgentOutputDir)')" />
+  </Target>
 
 </Project>
