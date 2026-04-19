@@ -1,0 +1,14 @@
+<Project Sdk="WixToolset.Sdk/7.0.0">
+
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <OutputName>WinEvoAgentSetup</OutputName>
+    <!-- GPLv3 open-source project: accept the WiX 7 OSMF EULA.
+         See https://docs.firegiant.com/wix/osmf/ — OSS projects use WiX at no cost. -->
+    <AcceptEula>wix7</AcceptEula>
+    <!-- TODO: installer has no components yet, so the Media table has no entries.
+         Suppress ICE71 until real content is added. -->
+    <SuppressIces>ICE71</SuppressIces>
+  </PropertyGroup>
+
+</Project>

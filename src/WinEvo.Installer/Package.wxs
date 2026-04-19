@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <!--
+    TODO: Real installer will:
+      - Install WinEvo.Agent.exe under Program Files.
+      - Install WinEvo.Tray.exe alongside.
+      - Register WinEvo.Agent.exe as a Windows Service (auto-start).
+      - Register a per-user logon task for WinEvo.Tray.exe.
+      - Uninstall cleanly on MSI uninstall.
+  -->
+
+  <Package Name="WinEvo Agent"
+           Manufacturer="Hillpro"
+           Version="0.1.0.0"
+           UpgradeCode="a6f2c3e4-5b9d-4f21-9a3e-c7d8b6e4f2d1"
+           Scope="perMachine">
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of WinEvo is already installed." />
+
+    <Feature Id="MainFeature" Title="WinEvo Agent" Level="1">
+      <!-- TODO: files and service registration. -->
+    </Feature>
+
+  </Package>
+
+</Wix>

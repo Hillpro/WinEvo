@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WinEvo.ActionModel/WinEvo.ActionModel.csproj" />
+    <Project Path="src/WinEvo.Actions.Abstractions/WinEvo.Actions.Abstractions.csproj" />
+    <Project Path="src/WinEvo.Actions.Operations/WinEvo.Actions.Operations.csproj" />
+    <Project Path="src/WinEvo.Agent.Core/WinEvo.Agent.Core.csproj" />
+    <Project Path="src/WinEvo.Agent/WinEvo.Agent.csproj" />
+    <Project Path="src/WinEvo.Contracts/WinEvo.Contracts.csproj" />
+    <Project Path="src/WinEvo.Installer/WinEvo.Installer.wixproj" Type="b7dd6f7e-def8-4e67-b5b7-07ef123db6f0" />
+    <Project Path="src/WinEvo.Ipc/WinEvo.Ipc.csproj" />
+    <Project Path="src/WinEvo.Shell.Core/WinEvo.Shell.Core.csproj" />
+    <Project Path="src/WinEvo.Shell/WinEvo.Shell.csproj" />
+    <Project Path="src/WinEvo.Tools.Sysinternals/WinEvo.Tools.Sysinternals.csproj" />
+    <Project Path="src/WinEvo.Tray/WinEvo.Tray.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WinEvo.ActionModel.Tests/WinEvo.ActionModel.Tests.csproj" />
+    <Project Path="tests/WinEvo.Actions.Operations.Tests/WinEvo.Actions.Operations.Tests.csproj" />
+    <Project Path="tests/WinEvo.Agent.Core.Tests/WinEvo.Agent.Core.Tests.csproj" />
+    <Project Path="tests/WinEvo.Ipc.Tests/WinEvo.Ipc.Tests.csproj" />
+    <Project Path="tests/WinEvo.Shell.Core.Tests/WinEvo.Shell.Core.Tests.csproj" />
+  </Folder>
+</Solution>

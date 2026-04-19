@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+option csharp_namespace = "WinEvo.Contracts.V1";
+
+package winevo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+// AgentService is the sole IPC surface exposed by the WinEvo agent.
+// See docs/ipc-contract.md for pipe naming, client auth, and semantics.
+service AgentService {
+  rpc Handshake(HandshakeRequest) returns (HandshakeResponse);
+
+  rpc GetAgentStatus(google.protobuf.Empty) returns (AgentStatus);
+  rpc ListOperations(google.protobuf.Empty) returns (OperationCatalog);
+
+  rpc ValidateAction(ActionManifest) returns (ValidationReport);
+  rpc DryRunAction(DryRunRequest) returns (DryRunReport);
+
+  rpc ExecuteAction(ExecuteRequest) returns (stream ExecutionEvent);
+  rpc CancelExecution(CancelRequest) returns (CancelResponse);
+  rpc UndoExecution(UndoRequest) returns (stream ExecutionEvent);
+
+  rpc ListRunningExecutions(google.protobuf.Empty) returns (RunningExecutionList);
+  rpc SubscribeEvents(google.protobuf.Empty) returns (stream AgentEvent);
+
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+}
+
+// ---- Handshake ----
+
+message HandshakeRequest {
+  string client_kind = 1;
+  string client_version = 2;
+  int32 protocol_version = 3;
+}
+
+message HandshakeResponse {
+  int32 agent_protocol_version = 1;
+  string agent_version = 2;
+  AgentMode mode = 3;
+  repeated string supported_operations = 4;
+  repeated string capability_flags = 5;
+}
+
+enum AgentMode {
+  AGENT_MODE_UNSPECIFIED = 0;
+  AGENT_MODE_SERVICE = 1;
+  AGENT_MODE_BROKER = 2;
+}
+
+// ---- Status / catalog ----
+
+message AgentStatus {
+  AgentMode mode = 1;
+  string version = 2;
+  int32 running_execution_count = 3;
+  google.protobuf.Timestamp started_at = 4;
+}
+
+message OperationCatalog {
+  repeated OperationDescriptor operations = 1;
+}
+
+message OperationDescriptor {
+  string id = 1;
+  string display_name = 2;
+  bool elevates = 3;
+  bool supports_undo = 4;
+  bool supports_dry_run = 5;
+}
+
+// ---- Manifest / validation ----
+
+// Opaque JSON payload of the manifest. The agent parses it using the same
+// ActionModel library as the Shell; no need to re-describe the schema in proto.
+message ActionManifest {
+  string manifest_json = 1;
+}
+
+message ValidationReport {
+  bool valid = 1;
+  repeated ValidationIssue issues = 2;
+}
+
+message ValidationIssue {
+  string severity = 1;
+  string json_pointer = 2;
+  string message = 3;
+}
+
+// ---- Dry-run / execute / undo ----
+
+message DryRunRequest {
+  ActionManifest manifest = 1;
+  map<string, string> parameters = 2;
+}
+
+message DryRunReport {
+  bool supported = 1;
+  repeated string preview_lines = 2;
+}
+
+message ExecuteRequest {
+  ActionManifest manifest = 1;
+  map<string, string> parameters = 2;
+}
+
+message CancelRequest { string execution_id = 1; }
+message CancelResponse { bool accepted = 1; }
+
+message UndoRequest { string execution_id = 1; }
+
+message ExecutionEvent {
+  string execution_id = 1;
+  oneof event {
+    StepStarted step_started = 2;
+    ProgressUpdate progress_update = 3;
+    LogLine log_line = 4;
+    StepCompleted step_completed = 5;
+    ExecutionFinished execution_finished = 6;
+  }
+}
+
+message StepStarted {
+  string step_id = 1;
+  string description = 2;
+}
+
+message ProgressUpdate {
+  string step_id = 1;
+  double ratio = 2;
+  string message = 3;
+}
+
+message LogLine {
+  string step_id = 1;
+  string level = 2;
+  string message = 3;
+}
+
+message StepCompleted {
+  string step_id = 1;
+  enum Outcome {
+    OUTCOME_UNSPECIFIED = 0;
+    SUCCESS = 1;
+    FAILED = 2;
+    SKIPPED = 3;
+  }
+  Outcome outcome = 2;
+  string message = 3;
+  google.protobuf.Duration duration = 4;
+}
+
+message ExecutionFinished {
+  enum Outcome {
+    OUTCOME_UNSPECIFIED = 0;
+    SUCCESS = 1;
+    FAILED = 2;
+    CANCELLED = 3;
+    ROLLED_BACK = 4;
+  }
+  Outcome outcome = 1;
+  string message = 2;
+  google.protobuf.Duration duration = 3;
+}
+
+message RunningExecutionList {
+  repeated RunningExecution executions = 1;
+}
+
+message RunningExecution {
+  string execution_id = 1;
+  string action_id = 2;
+  google.protobuf.Timestamp started_at = 3;
+  double progress_ratio = 4;
+}
+
+// ---- Fan-out ----
+
+message AgentEvent {
+  oneof event {
+    ExecutionEvent execution = 1;
+    AgentLifecycleEvent lifecycle = 2;
+  }
+}
+
+message AgentLifecycleEvent {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    STARTED = 1;
+    STOPPING = 2;
+  }
+  Kind kind = 1;
+  string message = 2;
+}
+
+// ---- Shutdown (broker mode only) ----
+
+message ShutdownRequest { bool force = 1; }
+message ShutdownResponse { bool accepted = 1; }

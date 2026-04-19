@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
+    <RootNamespace>WinEvo.Ipc</RootNamespace>
+    <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.Net.Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WinEvo.Contracts\WinEvo.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

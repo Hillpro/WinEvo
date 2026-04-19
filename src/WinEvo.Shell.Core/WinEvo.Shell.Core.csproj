@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
+    <RootNamespace>WinEvo.Shell.Core</RootNamespace>
+    <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WinEvo.ActionModel\WinEvo.ActionModel.csproj" />
+    <ProjectReference Include="..\WinEvo.Ipc\WinEvo.Ipc.csproj" />
+  </ItemGroup>
+
+</Project>

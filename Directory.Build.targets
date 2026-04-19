@@ -1,0 +1,21 @@
+<Project>
+
+  <!--
+    This file is imported AFTER each .csproj content is parsed, so
+    $(IsTestProject) set by Microsoft.NET.Test.Sdk or by the csproj itself
+    is visible here. Directory.Build.props imports earlier and cannot see it.
+  -->
+
+  <!-- Auto-import Xunit namespace in all test projects.
+       xunit.v3 doesn't ship an implicit-usings hook the way xunit v2 did. -->
+  <ItemGroup Condition="'$(IsTestProject)' == 'true'">
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Test-method names idiomatically use underscores (Should_X_when_Y).
+       CA1707 disallows them; silence it for test projects only. -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+</Project>

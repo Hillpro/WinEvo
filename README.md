@@ -17,8 +17,23 @@ An open-source optimizer and tweaker for Windows 11, built as a WinUI 3 applicat
 
 - **Windows 11 21H2** (build 22000) or later, x64 or ARM64.
 - **.NET 10 SDK** (currently 10.0.202) to build.
-- **Windows App SDK** (latest stable 1.x).
-- **WiX Toolset v5** for MSI authoring.
+- **Windows App SDK** (latest stable 1.8.x).
+- **WiX Toolset v7** for MSI authoring.
+
+## Prerequisites for Visual Studio users
+
+Visual Studio 2022 does **not** recognize `.wixproj` (WiX v4+ SDK-style) projects out of the box. If you open `WinEvo.slnx` in VS without the extension below, the Installer project will fail to load.
+
+**Install [HeatWave](https://www.firegiant.com/wix/heatwave/)** — FireGiant's (the WiX maintainers') Visual Studio extension for WiX 4/5/6/7.
+
+From inside Visual Studio: *Extensions → Manage Extensions → Online → search "HeatWave" → Download → restart VS*. Or download the `.vsix` directly from firegiant.com.
+
+**If you don't want HeatWave**, build from the CLI instead:
+
+```bash
+dotnet build WinEvo.slnx       # builds everything including the installer
+dotnet test  WinEvo.slnx       # runs the test projects
+```
 
 ## Architecture at a glance
 
@@ -42,10 +57,6 @@ Shell ⇄ Tray ⇄ Agent over named pipes + gRPC. See [docs/architecture.md](doc
 - `build/` — MSIX/MSI/signing scripts (later).
 
 ## Building
-
-*(Phase 2 of scaffolding will introduce the solution file.)*
-
-Once the solution exists:
 
 ```bash
 dotnet restore
