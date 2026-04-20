@@ -4,7 +4,7 @@ An open-source optimizer and tweaker for Windows 11, built as a WinUI 3 applicat
 
 ## Status
 
-🚧 **Pre-alpha.** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions.
+🚧 **Pre-alpha.** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions. Three operations are wired (`registry-set`, `process-kill`, `external-process`); the rest of the schema's operation catalog is still TODO. IPC is length-prefixed JSON over a named pipe; gRPC (`.proto` already defined) is the target transport.
 
 ## Goals
 
@@ -42,7 +42,7 @@ Four processes, one agent binary with two modes:
 | Process | Tech | Elevation | Purpose |
 |---|---|---|---|
 | `WinEvo.exe` | WinUI 3 | user | Main UI. Fully exits when closed. |
-| `WinEvo.Tray.exe` | WinForms | user | Tray icon; persists when background is enabled. |
+| `WinEvo.Tray.exe` | WinForms | user | Tray icon; persists when background is enabled. *(stub; not connected to the agent yet)* |
 | `WinEvo.Agent.exe --service` | .NET Windows app | LocalSystem | Persistent elevated actions. *(not implemented yet)* |
 | `WinEvo.Agent.exe --broker` | *same binary* | user, UAC-promoted on demand | Long-lived for the Shell's session; replaces itself with an elevated broker when an action needs it. |
 
@@ -53,20 +53,19 @@ Shell ⇄ Agent over a named pipe (length-prefixed JSON today; gRPC `.proto` def
 - `src/` — all C#/WiX projects.
 - `tests/` — unit test projects.
 - `actions/` — built-in JSON action manifests + JSON Schema.
-- `docs/` — architecture, action-authoring guide, IPC contract, security model.
-- `build/` — MSIX/MSI/signing scripts (later).
+- `docs/` — architecture, action-authoring guide, IPC contract, security model (each doc carries its own `*(not implemented yet)*` markers where relevant).
+- `AUTHORS`, `LICENSE` — authorship and GPLv3 text.
 
 ## Building and running
 
 ```bash
-dotnet restore
-dotnet build WinEvo.slnx
-dotnet test  WinEvo.slnx
+dotnet restore WinEvo.slnx
+dotnet build   WinEvo.slnx
+dotnet test    WinEvo.slnx
 dotnet run --project src/WinEvo.Shell     # or F5 in Visual Studio
 ```
 
-Agent diagnostic log:
-`%TEMP%\winevo-agent.log`.
+Agent diagnostic log: `%TEMP%\winevo-agent.log` (startup events, pipe-security outcomes, unhandled exceptions — essential for elevated runs where the agent has no visible stdio).
 
 ## Contributing actions
 
