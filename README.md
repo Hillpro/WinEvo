@@ -4,7 +4,7 @@ An open-source optimizer and tweaker for Windows 11, built as a WinUI 3 applicat
 
 ## Status
 
-🚧 **Pre-alpha.** Scaffolding phase. Nothing is runnable yet.
+🚧 **Pre-alpha.** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions.
 
 ## Goals
 
@@ -43,10 +43,10 @@ Four processes, one agent binary with two modes:
 |---|---|---|---|
 | `WinEvo.exe` | WinUI 3 | user | Main UI. Fully exits when closed. |
 | `WinEvo.Tray.exe` | WinForms | user | Tray icon; persists when background is enabled. |
-| `WinEvo.Agent.exe --service` | .NET console | LocalSystem | Persistent elevated actions (opt-in). |
-| `WinEvo.Agent.exe --broker` | *same binary* | UAC-elevated | Ephemeral fallback when service is off. |
+| `WinEvo.Agent.exe --service` | .NET Windows app | LocalSystem | Persistent elevated actions. *(not implemented yet)* |
+| `WinEvo.Agent.exe --broker` | *same binary* | user, UAC-promoted on demand | Long-lived for the Shell's session; replaces itself with an elevated broker when an action needs it. |
 
-Shell ⇄ Tray ⇄ Agent over named pipes + gRPC. See [docs/architecture.md](docs/architecture.md).
+Shell ⇄ Agent over a named pipe (length-prefixed JSON today; gRPC `.proto` defined for a later transport swap). See [docs/architecture.md](docs/architecture.md) and [docs/ipc-contract.md](docs/ipc-contract.md). Tray ↔ Agent integration is not wired yet.
 
 ## Layout
 
@@ -56,12 +56,17 @@ Shell ⇄ Tray ⇄ Agent over named pipes + gRPC. See [docs/architecture.md](doc
 - `docs/` — architecture, action-authoring guide, IPC contract, security model.
 - `build/` — MSIX/MSI/signing scripts (later).
 
-## Building
+## Building and running
 
 ```bash
 dotnet restore
-dotnet build -c Release
+dotnet build WinEvo.slnx
+dotnet test  WinEvo.slnx
+dotnet run --project src/WinEvo.Shell     # or F5 in Visual Studio
 ```
+
+Agent diagnostic log:
+`%TEMP%\winevo-agent.log`.
 
 ## Contributing actions
 

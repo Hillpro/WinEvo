@@ -1,5 +1,12 @@
 # Architecture
 
+> **Implementation status (summary).**
+> - ✅ **Wired:** Shell (WinUI 3), Agent broker process, JSON-over-pipe IPC, handshake, lazy UAC promotion with Medium-IL pipe-label handling, three operations (`registry-set`, `process-kill`, `external-process`), end-to-end execute flow.
+> - 🚧 **Partial:** manifest parse (lenient, no schema validation), localisation (inline only, no shared resource bundles), process-tree cleanup on shutdown (children can outlive the agent).
+> - 🔲 **Not yet implemented:** Service mode, service install/uninstall, Tray ↔ Agent IPC, gRPC transport, streaming progress events, undo, dry-run, restore points, execution audit log, Authenticode client verification, code signing, Sysinternals tool resolver, remaining operations (`powershell`, `command`, `builtin-exe`, `registry-delete/read`, `service-*`, `file-*`, `delay`, `sysinternals-tool`, `dism`, `system-restore-point`), sub-action step execution, template functions (`drive()` / `basename()` / `dirname()`), type-specific parameter pickers in the UI.
+>
+> The narrative below describes the **full architecture** (including unimplemented pieces). Companion docs mark target-vs-current per feature: [ipc-contract.md](ipc-contract.md), [action-authoring.md](action-authoring.md), [security-model.md](security-model.md).
+
 ## Processes
 
 WinEvo runs as **up to four processes**, split by privilege level and UI needs.
@@ -13,7 +20,7 @@ WinEvo runs as **up to four processes**, split by privilege level and UI needs.
 │     close                     │         │                               │
 └──────────────┬────────────────┘         └──────────────┬────────────────┘
                │                                         │
-               │             named pipes + gRPC          │
+               │        named pipes (JSON today)         │
                ▼                                         ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         WinEvo.Agent.exe                                │
@@ -31,15 +38,18 @@ WinUI 3 has a significant working-set cost (~150–300 MB). When the user closes
 
 ### Why one agent binary in two modes
 
-Users who enable background execution get a persistent Windows Service that can run long actions while the UI is closed. Users who opt out get an on-demand broker that UAC-prompts once per elevated batch and exits when idle. Both behaviors reuse the exact same execution code — there is no "service version" and "broker version" of each action. The binary reads its startup mode from command-line args; everything above that is identical.
+Users who enable background execution get a persistent Windows Service that can run long actions while the UI is closed. Users who opt out get an on-demand broker. Both modes reuse the exact same execution code — there is no "service version" and "broker version" of each action. The binary reads its startup mode from command-line args; everything above that is identical.
+
+**Current implementation:** only the broker mode is wired. The broker is spawned when the Shell starts, runs as the current user, and is replaced with an elevated instance on demand when an action declares `elevation: required`. Service mode + its install/uninstall entry points are TODO.
 
 ## IPC
 
-Named pipe + gRPC. See [ipc-contract.md](ipc-contract.md) for the protocol and security model.
+Named pipe transport. Current runtime uses length-prefixed JSON framing; the
+gRPC contract is defined in [`WinEvo.Contracts/Protos/agent-service.proto`](../src/WinEvo.Contracts/Protos/agent-service.proto) as the target transport for a later swap. See [ipc-contract.md](ipc-contract.md) for the full protocol and security model.
 
-- **Service mode pipe:** `\\.\pipe\WinEvo.Agent.System`, ACL grants LocalSystem + the interactive user SID.
-- **Broker mode pipe:** `\\.\pipe\WinEvo.Agent.User.{sessionId}`, ACL grants only the interactive user SID.
-- **Client verification:** agent resolves the client PID via `GetNamedPipeClientProcessId` and verifies the client executable's Authenticode signature before accepting commands.
+- **Service mode pipe:** `\\.\pipe\WinEvo.Agent.System`, ACL grants LocalSystem + the interactive user SID. *(service mode not implemented yet)*
+- **Broker mode pipe:** `\\.\pipe\WinEvo.Agent.User`, ACL grants the interactive user SID. When the broker is elevated, the pipe's mandatory integrity label is lowered to Medium so the unelevated Shell can write to it.
+- **Client verification:** agent will resolve the client PID via `GetNamedPipeClientProcessId` and verify the client executable's Authenticode signature before accepting commands. *(not implemented yet)*
 
 ## Action model
 

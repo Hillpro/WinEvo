@@ -1,6 +1,8 @@
 # Authoring Actions
 
-An **action** in WinEvo is a JSON document describing what to do, what to warn the user about, what parameters to collect, and how to undo the change. Actions live in `actions/<category>/<id>.json` (shipped with the app) or `%LOCALAPPDATA%\WinEvo\Actions\<category>\<id>.json` (added by users).
+> **Implementation status.** The manifest loader, the three wired operations (`registry-set`, `process-kill`, `external-process`), the `ExecutionMode` enum, `{{params.X}}` substitution, and localised `name` / `description` are live. Many schema features below are still *target design* — they parse cleanly but have no runtime effect yet. Look for *(not implemented yet)* markers on specific sections.
+
+An **action** in WinEvo is a JSON document describing what to do, what to warn the user about, what parameters to collect, and (eventually) how to undo the change. Actions live in `actions/<category>/<id>.json` (shipped with the app) or `%LOCALAPPDATA%\WinEvo\Actions\<category>\<id>.json` (added by users).
 
 The schema is in [../actions/schemas/action.schema.json](../actions/schemas/action.schema.json). Point your editor at it for autocomplete and validation.
 
@@ -11,9 +13,8 @@ The schema is in [../actions/schemas/action.schema.json](../actions/schemas/acti
   "$schema": "../schemas/action.schema.json",
   "id": "category.short-identifier",
   "version": "1.0.0",
-  "name":        { "en": "Human name", "fr": "Nom humain" },
-  "description": { "en": "One-sentence description.",
-                   "fr": "Description d'une phrase." },
+  "name": "Human name",
+  "description": "One-sentence description.",
   "category": "customization | resources | storage | updates",
   "tags": ["privacy", "..."],
   "icon": "icon-id",
@@ -25,7 +26,9 @@ The schema is in [../actions/schemas/action.schema.json](../actions/schemas/acti
   "preconditions":[ ... ],
   "execution":    { ... },
   "undo":         { ... },
-  "dryRun":       { ... }
+  "dryRun":       { ... },
+
+  "localization": { "fr": { "name": "...", "description": "..." } }
 }
 ```
 
@@ -61,8 +64,8 @@ Language codes are IETF tags (`fr`, `es`, `de-AT`, …). Any field not overridde
 
 **Two distinct mechanisms:**
 
-- **Inline localization** (above) — for text unique to this manifest.
-- **Resource-key references** — for text shared across many manifests. Used by `warnings[].key`, `undo.reason`, `dryRun.preview`. The runtime resolves these keys from shared string bundles (`resources/Strings.<lang>.resx` in the Shell), so a generic warning like "this action is destructive" is translated once and reused everywhere.
+- **Inline localization** (above) — ✅ for text unique to this manifest.
+- **Resource-key references** *(not implemented yet)* — for text shared across many manifests. Used by `warnings[].key`, `undo.reason`, `dryRun.preview`. The runtime will resolve these keys from shared string bundles (`resources/Strings.<lang>.resx` in the Shell), so a generic warning like "this action is destructive" is translated once and reused everywhere.
 
 ## Requirements
 
@@ -75,15 +78,14 @@ Language codes are IETF tags (`fr`, `es`, `de-AT`, …). Any field not overridde
 }
 ```
 
-- **elevation: required** — the agent must be available. If the user has background execution off, WinEvo spawns a broker on demand (UAC).
-- **elevation: not-required** — runs in the Shell process, no IPC round-trip.
-- **elevation: optional** — elevation improves the operation but isn't mandatory; the runtime picks the path at execution time.
+- **elevation** — ✅ enforced. `required` triggers the Shell's lazy UAC-promotion flow before the action runs.
+- **packageIdentity** / **minWindowsBuild** / **architectures** — *(not implemented yet)* — parsed, but not checked at runtime.
 
-## Warnings
+## Warnings *(not implemented yet for UI gating)*
 
-Each warning has a **severity** and a **resource key**. Severities drive the UI presentation (icon, colour, required confirmation).
+Each warning has a **severity** and a **resource key**. Severities will drive the UI presentation (icon, colour, required confirmation). Parsed today; not yet consulted at execute time.
 
-| Severity | UI treatment |
+| Severity | UI treatment (planned) |
 |---|---|
 | `info` | Small hint, no extra prompt. |
 | `warning` | Yellow banner, dismissable confirmation. |
@@ -96,9 +98,12 @@ Parameters are rendered in the Shell as form fields and bound by id into the exe
 
 Supported parameter `type`s (v1): `string`, `integer`, `boolean`, `enum`, `drive`, `wifi-profile`, `file-path`, `directory-path`, `service-name`.
 
+- ✅ **Binding + substitution** works — every declared parameter becomes a form field in the detail view and is templated into operation properties at execute time.
+- *(not implemented yet)* **Type-specific pickers** — currently every parameter renders as a plain text box regardless of `type`. Drive pickers, Wi-Fi profile pickers, enum dropdowns, boolean toggles, etc. will land alongside the type-aware UI.
+
 ## Execution
 
-`execution.mode` is `sequential` (steps run in order, stop on first failure) or `sequential-continue-on-error` (best-effort).
+`execution.mode` is `sequential` (steps run in order, stop on first failure) or `sequential-continue-on-error` (best-effort). ✅ Both wired.
 
 `execution.steps` is an ordered list of steps. Each step is either an **operation** (an atomic invocation) or a **sub-action** (a reference to another action manifest). See [../actions/schemas/action.schema.json](../actions/schemas/action.schema.json) for the full set of operations.
 
@@ -119,14 +124,14 @@ Path variables (`%SystemRoot%`, `%ProgramFiles%`, etc.) are expanded via `Enviro
 
 ### Choosing between execution operations
 
-| Operation | When to use |
-|---|---|
-| `external-process` | You have a specific `.exe` and want to invoke it with arguments. Argv-style — arguments are **not** interpreted by a shell, so untrusted parameter values cannot inject extra commands. Safest default. |
-| `builtin-exe` | Alias for `external-process` restricted to `%SystemRoot%\System32\*.exe`. Use for `sfc`, `dism`, `cipher`, `takeown`, etc. |
-| `powershell` | PowerShell script or cmdlet invocation. Pick this for Windows-automation idioms (`Export-WindowsDriver`, `Get-Service`, object pipelines). |
-| `command` | `cmd.exe`-style script — single or multi-line. Pick this when you need shell features: pipes (`\|`), redirects (`>`), chaining (`&&`, `\|\|`), `for` loops, classic batch syntax. Values substituted via `{{...}}` are **not** auto-escaped — the author is responsible for safely quoting any untrusted input. Prefer `external-process` when a shell isn't actually needed. |
+| Operation | When to use | Status |
+|---|---|---|
+| `external-process` | Argv-style invocation of an exe. Safe default — arguments are not shell-interpreted. | ✅ wired |
+| `builtin-exe` | Alias for `external-process` restricted to `%SystemRoot%\System32\*.exe`. | *(not implemented yet)* |
+| `powershell` | PowerShell script or cmdlet invocation. | *(not implemented yet)* |
+| `command` | `cmd.exe`-style script — single or multi-line — for pipes / redirects / `&&`. Substitutions are **not** auto-escaped; author is responsible for safe quoting. | *(not implemented yet)* |
 
-`command` shape:
+`command` shape (target):
 
 ```json
 {
@@ -137,13 +142,13 @@ Path variables (`%SystemRoot%`, `%ProgramFiles%`, etc.) are expanded via `Enviro
 }
 ```
 
-Multi-line `script` values are written to a temporary `.cmd` file and executed via `cmd.exe /C`. For single-line scripts the agent passes `/C "<script>"` directly.
+Additional operations listed in the schema but *(not implemented yet)*: `registry-delete`, `registry-read`, `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `delay`, `sysinternals-tool`, `dism`, `system-restore-point`.
 
 ## Templating
 
-Wherever a string is executed, `{{params.<id>}}` substitutes the parameter value. The substitution is **shell-neutral** — args are passed as an argv array, so no quoting or escaping is needed or allowed.
+Wherever a string is executed, `{{params.<id>}}` substitutes the parameter value. ✅ Works today. The substitution is **shell-neutral** — args are passed as an argv array for `external-process`, so no quoting or escaping is needed or allowed.
 
-## Undo
+## Undo *(not implemented yet)*
 
 ```json
 "undo": {
@@ -153,11 +158,13 @@ Wherever a string is executed, `{{params.<id>}}` substitutes the parameter value
 }
 ```
 
-- **automatic** — operations that set `backupForUndo: true` capture enough state to self-revert; the runtime composes an undo from their step outputs.
+- **automatic** — operations that set `backupForUndo: true` will capture enough state to self-revert; the runtime composes an undo from their step outputs.
 - **manual** — the manifest includes an explicit `undo.steps` list (mirror of `execution.steps`).
 - **not supported** — provide a `reason` resource key explaining why (e.g. `undo.irreversible`).
 
-## Dry-run
+Currently nothing in the undo block has a runtime effect. Every executed action is effectively permanent until the undo engine ships.
+
+## Dry-run *(not implemented yet)*
 
 ```json
 "dryRun": {
@@ -169,9 +176,9 @@ Wherever a string is executed, `{{params.<id>}}` substitutes the parameter value
 }
 ```
 
-The Shell renders the resource string with the provided tokens. Dry-run does **not** execute any operation.
+When wired, the Shell will render the resource string with the provided tokens; dry-run will **not** execute any operation.
 
-## Composing actions (calling other actions)
+## Composing actions — sub-action steps *(not implemented yet)*
 
 A step can invoke another action instead of performing an operation. Mix freely — a composite can have its own operation steps alongside sub-action steps.
 
@@ -195,6 +202,8 @@ A step can invoke another action instead of performing an operation. Mix freely 
 }
 ```
 
+Sub-action steps **parse** correctly today but the executor returns a `sub-action steps are not supported yet` failure for them. The rest of this section documents the target semantics.
+
 ### Step `kind`
 
 | `kind`       | Required fields                              | Notes |
@@ -216,17 +225,17 @@ Parent passes child params by name, explicitly. No implicit inheritance by name-
 
 Child params not mentioned here fall back to their schema defaults; if a required child param has no default and no mapping, validation fails at load time.
 
-### Cycle detection
+### Cycle detection *(not implemented yet)*
 
-Action refs form a graph. The loader runs a depth-first scan before any execution and rejects any cycle it finds with the full path printed.
+Action refs form a graph. The loader will run a depth-first scan before any execution and reject any cycle it finds with the full path printed.
 
-### Version pinning
+### Version pinning *(not implemented yet)*
 
-`minVersion` on an action step is mandatory. If the installed version of the referenced action is older, the parent action is flagged unexecutable in the UI with an "update required" hint.
+`minVersion` on an action step is mandatory in the schema. At runtime the loader will reject composites whose sub-actions are below that pin.
 
-### Transitive elevation
+### Transitive elevation *(not implemented yet)*
 
-A composite's effective elevation requirement = `max` of its own operations' needs and every sub-action's needs (computed recursively). The UI shows the shield icon on the parent if any descendant requires elevation.
+A composite's effective elevation requirement = `max` of its own operations' needs and every sub-action's needs (computed recursively). The UI will show the shield icon on the parent if any descendant requires elevation.
 
 ### Undo is all-or-nothing
 
@@ -248,20 +257,20 @@ If all reached sub-actions support dry-run, the composite's preview pane shows e
 
 Inside template expressions (`{{ ... }}`) you may use a small set of built-in functions beyond parameter references:
 
-| Expression | Result |
-|---|---|
-| `{{params.foo}}` | Value of parameter `foo`. |
-| `{{drive(pathExpr)}}` | Drive letter of a path, e.g. `"C:\\"`. |
-| `{{basename(pathExpr)}}` | Last component of a path, e.g. `"myfolder"`. |
-| `{{dirname(pathExpr)}}` | Parent directory of a path, e.g. `"C:\\Users\\alice"`. |
+| Expression | Result | Status |
+|---|---|---|
+| `{{params.foo}}` | Value of parameter `foo`. | ✅ wired |
+| `{{drive(pathExpr)}}` | Drive letter of a path, e.g. `"C:\\"`. | *(not implemented yet)* |
+| `{{basename(pathExpr)}}` | Last component of a path, e.g. `"myfolder"`. | *(not implemented yet)* |
+| `{{dirname(pathExpr)}}` | Parent directory of a path, e.g. `"C:\\Users\\alice"`. | *(not implemented yet)* |
 
 Functions may be composed. Nested template references are not supported.
 
 ## Submitting an action
 
 1. Write the manifest under `actions/<category>/`.
-2. Validate it locally against the schema (any JSON Schema validator; the Shell will also validate on load).
-3. Add resource strings to `resources/Strings.en.resx` and `resources/Strings.fr.resx`.
+2. Validate it locally against the schema (any JSON Schema validator; *(not implemented yet)* the Shell will also validate on load).
+3. *(not implemented yet)* Add resource strings to `resources/Strings.en.resx` and `resources/Strings.fr.resx`.
 4. Open a PR. Community manifests are reviewed for safety; the reviewer cross-checks every operation the manifest invokes.
 
 ## Adding a new operation
@@ -270,5 +279,6 @@ Manifests can only compose **existing** operations. To add a fundamentally new o
 
 1. Open an issue describing the need.
 2. Add the operation to `WinEvo.Actions.Operations` as a class implementing `IActionOperation`.
-3. Add its schema to `actions/schemas/action.schema.json`.
-4. Submit a PR. This is the trusted-code boundary; expect review on security, undo correctness, and dry-run support.
+3. Add its id to the enum in `actions/schemas/action.schema.json`.
+4. Register the operation in `OperationCatalog.Default()`.
+5. Submit a PR. This is the trusted-code boundary; expect review on security, undo correctness, and dry-run support.

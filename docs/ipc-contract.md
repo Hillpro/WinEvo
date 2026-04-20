@@ -54,24 +54,26 @@ enum AgentMode { SERVICE = 0; BROKER = 1; }
 
 ## Service shape
 
+Of the RPCs below, only `Handshake` and `ExecuteAction` (request / response, no streaming) are implemented in the current JSON transport. The rest are target design for the gRPC swap.
+
 ```proto
 service AgentService {
-  rpc Handshake(HandshakeRequest) returns (HandshakeResponse);
+  rpc Handshake(HandshakeRequest) returns (HandshakeResponse);                   // ✅ wired (JSON)
 
-  rpc GetAgentStatus(Empty) returns (AgentStatus);
+  rpc GetAgentStatus(Empty) returns (AgentStatus);                                // not implemented yet
 
-  rpc ListOperations(Empty) returns (OperationCatalog);
-  rpc ValidateAction(ActionManifest) returns (ValidationReport);
-  rpc DryRunAction(DryRunRequest) returns (DryRunReport);
+  rpc ListOperations(Empty) returns (OperationCatalog);                           // not implemented yet
+  rpc ValidateAction(ActionManifest) returns (ValidationReport);                  // not implemented yet
+  rpc DryRunAction(DryRunRequest) returns (DryRunReport);                         // not implemented yet
 
-  rpc ExecuteAction(ExecuteRequest) returns (stream ExecutionEvent);
-  rpc CancelExecution(CancelRequest) returns (CancelResponse);
-  rpc UndoExecution(UndoRequest) returns (stream ExecutionEvent);
+  rpc ExecuteAction(ExecuteRequest) returns (stream ExecutionEvent);              // ✅ wired (JSON, no streaming)
+  rpc CancelExecution(CancelRequest) returns (CancelResponse);                    // not implemented yet
+  rpc UndoExecution(UndoRequest) returns (stream ExecutionEvent);                 // not implemented yet
 
-  rpc ListRunningExecutions(Empty) returns (RunningExecutionList);
-  rpc SubscribeEvents(Empty) returns (stream AgentEvent);
+  rpc ListRunningExecutions(Empty) returns (RunningExecutionList);                // not implemented yet
+  rpc SubscribeEvents(Empty) returns (stream AgentEvent);                         // not implemented yet
 
-  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);   // broker mode only
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);   // broker mode only — not implemented yet
 }
 ```
 
