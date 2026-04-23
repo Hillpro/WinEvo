@@ -48,7 +48,7 @@ public sealed class ExternalProcessOperation : IActionOperation
 
         try
         {
-            using var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+            using var process = new Process { StartInfo = psi };
             process.OutputDataReceived += (_, e) => { if (e.Data is not null) stdout.AppendLine(e.Data); };
             process.ErrorDataReceived += (_, e) => { if (e.Data is not null) stderr.AppendLine(e.Data); };
 
