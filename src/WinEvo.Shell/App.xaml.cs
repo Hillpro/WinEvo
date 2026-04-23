@@ -1,5 +1,7 @@
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels;
 
@@ -14,6 +16,9 @@ public partial class App : Application
 {
     private AgentLauncher? _agentLauncher;
     private MainWindow? _window;
+
+    private bool _teardownStarted;
+    private bool _teardownCompleted;
 
     public App()
     {
@@ -37,7 +42,7 @@ public partial class App : Application
         var viewModel = new MainViewModel(catalog, _agentLauncher, language: "en", dispatcherQueue);
 
         _window = new MainWindow(viewModel);
-        _window.Closed += OnWindowClosed;
+        _window.AppWindow.Closing += OnAppWindowClosing;
         _window.Activate();
 
         // Kick off catalog + agent startup on the UI dispatcher so the VM's
@@ -49,12 +54,62 @@ public partial class App : Application
         });
     }
 
-    private async void OnWindowClosed(object sender, WindowEventArgs args)
+    private async void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        if (_agentLauncher is not null)
+        // Second pass: the window is allowed to close.
+        if (_teardownCompleted) return;
+
+        // Block the close *synchronously* before the first await. The framework
+        // reads args.Cancel at the first suspension point, so setting it after an
+        // await would let the window close while disposal is still pending.
+        args.Cancel = true;
+
+        if (_teardownStarted) return;
+        _teardownStarted = true;
+
+        // Broker mode: if an action is running, confirm before killing the agent,
+        // since teardown ends the child operation abruptly.
+        // TODO: aggregate IsRunning across all in-flight actions on MainViewModel
+        // so executions whose Detail VM was replaced by switching selection are
+        // also observed here, not just the currently-selected one.
+        if (_window?.ViewModel.Detail?.IsRunning == true
+            && !await ConfirmStopRunningActionAsync())
         {
-            await _agentLauncher.DisposeAsync();
-            _agentLauncher = null;
+            // User chose to let the action finish.
+            _teardownStarted = false;
+            return;
         }
+
+        try
+        {
+            if (_agentLauncher is not null)
+            {
+                await _agentLauncher.DisposeAsync();
+                _agentLauncher = null;
+            }
+        }
+        finally
+        {
+            // Re-trigger the close
+            _teardownCompleted = true;
+            _window?.Close();
+        }
+    }
+
+    private async Task<bool> ConfirmStopRunningActionAsync()
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Action in progress",
+            Content = "An action is still running. Closing will stop the agent and "
+                    + "may leave the system in a partial state. Continue?",
+            PrimaryButtonText = "Stop and close",
+            CloseButtonText = "Keep running",
+            DefaultButton = ContentDialogButton.Close,
+            // XamlRoot is required for ContentDialog in a WinUI 3 desktop app;
+            // without it the dialog fails to present and ShowAsync throws.
+            XamlRoot = _window!.Content.XamlRoot,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 }
