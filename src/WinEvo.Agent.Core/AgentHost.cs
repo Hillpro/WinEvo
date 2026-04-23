@@ -178,18 +178,11 @@ public sealed class AgentHost
 
     private async Task<PipeMessage> HandleExecuteAsync(ExecuteRequest request, CancellationToken ct)
     {
-        var manifestJson = request.Manifest.ToJsonString();
-        var manifest = ManifestLoader.Parse(manifestJson);
+        var manifest = ManifestLoader.Parse(request.Manifest);
 
-        // Materialise each parameter into a document-independent JsonElement so
-        // the transient JsonDocuments can be disposed immediately (pool return).
         var rawParams = new Dictionary<string, JsonElement>();
         foreach (var (k, v) in request.Parameters)
-        {
-            var json = v?.ToJsonString() ?? "null";
-            using var doc = JsonDocument.Parse(json);
-            rawParams[k] = doc.RootElement.Clone();
-        }
+            rawParams[k] = JsonSerializer.SerializeToElement(v);
 
         var bound = ActionExecutor.BindParameters(manifest, rawParams);
         return await _executor.ExecuteAsync(manifest, bound, request.RequestId, ct).ConfigureAwait(false);

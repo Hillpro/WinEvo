@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace WinEvo.ActionModel;
 
@@ -29,6 +30,13 @@ public static class ManifestLoader
         using var doc = JsonDocument.Parse(json, s_documentOptions);
         return Parse(doc.RootElement);
     }
+
+    /// <summary>
+    /// Parses a manifest from a <see cref="JsonNode"/> — the form the agent
+    /// receives over IPC. Converts the node to a <see cref="JsonElement"/>.
+    /// </summary>
+    public static ActionManifest Parse(JsonNode node)
+        => Parse(JsonSerializer.SerializeToElement(node));
 
     /// <summary>
     /// Parses a manifest from an already-loaded <see cref="JsonElement"/>.
