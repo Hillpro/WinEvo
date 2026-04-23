@@ -192,7 +192,7 @@ public sealed class AgentLauncher : IAsyncDisposable
             await _client.DisposeAsync().ConfigureAwait(false);
             _client = null;
         }
-        TryKill(_process);
+        try { _process?.Dispose(); } catch { /* best-effort */ }
         _process = null;
         IsElevated = false;
         LastHandshake = null;

@@ -51,32 +51,54 @@ public sealed class AgentHost
         await server.WaitForConnectionAsync(ct).ConfigureAwait(false);
         AgentLog.Write("client connected");
 
+        // Session-wide disconnect monitor.
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var monitor = PipeConnectionMonitor.WatchAsync(server, linked);
+
         try
         {
             while (server.IsConnected)
             {
-                ct.ThrowIfCancellationRequested();
-                var frame = await PipeFraming.ReadFrameAsync(server, ct).ConfigureAwait(false);
+                linked.Token.ThrowIfCancellationRequested();
+                var frame = await PipeFraming.ReadFrameAsync(server, linked.Token).ConfigureAwait(false);
                 if (frame is null) break;
 
                 PipeMessage response;
                 try
                 {
                     var request = PipeMessageSerializer.Deserialize(frame);
-                    response = await HandleAsync(request, ct).ConfigureAwait(false);
+                    response = await HandleAsync(request, linked.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (!server.IsConnected)
+                {
+                    // Pipe closed during the request.
+                    break;
                 }
                 catch (Exception ex)
                 {
                     response = new ErrorResponse { Message = $"{ex.GetType().Name}: {ex.Message}" };
                 }
 
-                var bytes = PipeMessageSerializer.Serialize(response);
-                await PipeFraming.WriteFrameAsync(server, bytes, ct).ConfigureAwait(false);
+                if (!server.IsConnected) break;
+
+                try
+                {
+                    var bytes = PipeMessageSerializer.Serialize(response);
+                    await PipeFraming.WriteFrameAsync(server, bytes, ct).ConfigureAwait(false);
+                }
+                catch (IOException) when (!server.IsConnected)
+                {
+                    // Client went away between HandleAsync returning and our
+                    // write; drop the response rather than surface the error.
+                    break;
+                }
             }
         }
         catch (OperationCanceledException) { /* graceful */ }
         finally
         {
+            linked.Cancel();
+            try { await monitor.ConfigureAwait(false); } catch { /* best-effort */ }
             AgentLog.Write("client disconnected, shutting down");
         }
     }

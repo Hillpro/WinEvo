@@ -14,6 +14,12 @@ namespace WinEvo.Agent;
 /// </summary>
 internal static class Program
 {
+    // Held for the whole process lifetime so its handle stays open until the
+    // kernel reclaims it on process exit. At that point JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+    // kills every child process we've spawned (e.g. a long-running `cipher /w:`).
+    // See JobObject.cs for why no Dispose / finalizer is involved.
+    private static JobObject? s_processGroup;
+
     public static async Task<int> Main(string[] args)
     {
         var mode = ParseMode(args);
@@ -21,6 +27,8 @@ internal static class Program
         using var identity = WindowsIdentity.GetCurrent();
         var elevated = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
         AgentLog.Write($"agent started — mode={mode}, elevated={elevated}, args=[{string.Join(' ', args)}]");
+
+        s_processGroup = TryBindProcessGroup();
 
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -59,6 +67,24 @@ internal static class Program
     {
         AgentLog.Write($"startup failure: {message}");
         return 2;
+    }
+
+    private static JobObject? TryBindProcessGroup()
+    {
+        try
+        {
+            var job = new JobObject();
+            AgentLog.Write("process group bound: child processes will die with the agent");
+            return job;
+        }
+        catch (Exception ex)
+        {
+            // Non-fatal: the agent still runs, but its spawned children may
+            // survive a crash. Most commonly this is a sandboxed / nested-job
+            // context where AssignProcessToJobObject is denied.
+            AgentLog.WriteException("failed to bind agent to a kill-on-close job; children may orphan on crash", ex);
+            return null;
+        }
     }
 
     private static AgentMode ParseMode(string[] args)
