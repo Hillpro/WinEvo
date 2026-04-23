@@ -72,7 +72,8 @@ public sealed partial class ActionDetailViewModel : ObservableObject
 
             await RunOnUiAsync(() => Status = "Running…").ConfigureAwait(false);
 
-            var manifestJson = JsonNode.Parse(ManifestToJson(Item.Manifest)) ?? new JsonObject();
+            var manifestJson = JsonNode.Parse(Item.Manifest.RawJson)
+                ?? throw new InvalidOperationException("manifest RawJson is not valid JSON");
             var paramDict = Parameters.ToDictionary(p => p.Id, p => p.ToJsonValue());
 
             var response = await client.ExecuteAsync(manifestJson, paramDict, ct).ConfigureAwait(false);
@@ -165,54 +166,4 @@ public sealed partial class ActionDetailViewModel : ObservableObject
         return tcs.Task;
     }
 
-    /// <summary>Re-serialises the parsed manifest back to JSON for transport to the agent.</summary>
-    private static string ManifestToJson(ActionManifest manifest)
-    {
-        // TODO: preserve the original raw manifest JSON end-to-end instead of
-        // reconstructing a minimal subset from the parsed model.
-        var root = new JsonObject
-        {
-            ["id"] = manifest.Id,
-            ["version"] = manifest.Version,
-            ["name"] = manifest.Name,
-            ["category"] = manifest.Category,
-        };
-
-        var steps = new JsonArray();
-        foreach (var step in manifest.Execution.Steps)
-        {
-            if (step is OperationStep op)
-            {
-                var parsed = JsonNode.Parse(op.Properties.GetRawText())!.AsObject();
-                parsed["kind"] = "operation";
-                steps.Add(parsed);
-            }
-            // sub-action steps are not supported yet; skip for transport.
-        }
-        root["execution"] = new JsonObject
-        {
-            ["mode"] = ExecutionModeToSchemaString(manifest.Execution.Mode),
-            ["steps"] = steps,
-        };
-
-        var parameters = new JsonArray();
-        foreach (var p in manifest.Parameters)
-        {
-            parameters.Add(new JsonObject
-            {
-                ["id"] = p.Id,
-                ["type"] = p.Type,
-                ["required"] = p.Required,
-            });
-        }
-        root["parameters"] = parameters;
-
-        return root.ToJsonString();
-    }
-
-    private static string ExecutionModeToSchemaString(ExecutionMode mode) => mode switch
-    {
-        ExecutionMode.SequentialContinueOnError => "sequential-continue-on-error",
-        _ => "sequential",
-    };
 }

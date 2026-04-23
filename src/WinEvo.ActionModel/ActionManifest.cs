@@ -24,6 +24,12 @@ public sealed class ActionManifest
     public Execution Execution { get; init; } = new();
     public LocalizationMap Localization { get; init; } = [];
 
+    /// <summary>
+    /// Authoritative JSON source of the manifest, preserved at parse time so
+    /// the Shell can forward it to the agent verbatim.
+    /// </summary>
+    public required string RawJson { get; init; }
+
     /// <summary>Returns the localized name for the requested language, falling back to the English base.</summary>
     public string GetLocalizedName(string? language)
     {

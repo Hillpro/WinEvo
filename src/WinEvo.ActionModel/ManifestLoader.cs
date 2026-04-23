@@ -53,6 +53,7 @@ public static class ManifestLoader
             Parameters = ParseParameters(root),
             Execution = ParseExecution(root),
             Localization = ParseLocalization(root),
+            RawJson = root.GetRawText(),
         };
         return manifest;
     }
