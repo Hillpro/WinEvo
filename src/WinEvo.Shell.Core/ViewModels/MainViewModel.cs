@@ -51,7 +51,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         await _catalog.LoadAsync(ct).ConfigureAwait(false);
 
-        await RunOnUiAsync(() =>
+        await _dispatcher.RunOnUiAsync(() =>
         {
             Actions.Clear();
             foreach (var manifest in _catalog.Manifests.OrderBy(m => m.Category).ThenBy(m => m.Name))
@@ -60,13 +60,13 @@ public sealed partial class MainViewModel : ObservableObject
 
         try
         {
-            await RunOnUiAsync(() => AgentStatus = "Starting agent…").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => AgentStatus = "Starting agent…").ConfigureAwait(false);
             await _agentLauncher.StartAsync(elevated: false, ct).ConfigureAwait(false);
             // OnAgentStateChanged fires from StartAsync and updates AgentStatus.
         }
         catch (Exception ex)
         {
-            await RunOnUiAsync(() => AgentStatus = $"Agent error: {ex.Message}").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => AgentStatus = $"Agent error: {ex.Message}").ConfigureAwait(false);
         }
     }
 
@@ -83,22 +83,4 @@ public sealed partial class MainViewModel : ObservableObject
         return $"Connected — agent {handshake.AgentVersion}, {handshake.SupportedOperations.Count} operations{badge}";
     }
 
-    private Task RunOnUiAsync(Action action)
-    {
-        if (_dispatcher.HasThreadAccess)
-        {
-            action();
-            return Task.CompletedTask;
-        }
-
-        var tcs = new TaskCompletionSource();
-        var enqueued = _dispatcher.TryEnqueue(() =>
-        {
-            try { action(); tcs.SetResult(); }
-            catch (Exception ex) { tcs.SetException(ex); }
-        });
-        if (!enqueued)
-            tcs.SetException(new InvalidOperationException("failed to enqueue UI update"));
-        return tcs.Task;
-    }
 }

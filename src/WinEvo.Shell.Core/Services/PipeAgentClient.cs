@@ -24,9 +24,27 @@ public sealed class PipeAgentClient : IAgentClient
 
     public async Task ConnectAsync(TimeSpan timeout, CancellationToken ct)
     {
-        _stream = new NamedPipeClientStream(
+        // Dispose any prior stream (e.g. failed attempt from the retry loop)
+        // before allocating a new one. Leaving _stream null until the new
+        // stream is fully connected keeps IsConnected honest on throw paths.
+        if (_stream is not null)
+        {
+            await _stream.DisposeAsync().ConfigureAwait(false);
+            _stream = null;
+        }
+
+        var stream = new NamedPipeClientStream(
             ".", _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-        await _stream.ConnectAsync((int)timeout.TotalMilliseconds, ct).ConfigureAwait(false);
+        try
+        {
+            await stream.ConnectAsync((int)timeout.TotalMilliseconds, ct).ConfigureAwait(false);
+            _stream = stream;
+        }
+        catch
+        {
+            await stream.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
     public async Task<HandshakeResponse> HandshakeAsync(CancellationToken ct)

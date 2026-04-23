@@ -70,7 +70,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject
             if (client is null)
                 return;
 
-            await RunOnUiAsync(() => Status = "Running…").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => Status = "Running…").ConfigureAwait(false);
 
             var manifestJson = JsonNode.Parse(Item.Manifest.RawJson)
                 ?? throw new InvalidOperationException("manifest RawJson is not valid JSON");
@@ -78,7 +78,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject
 
             var response = await client.ExecuteAsync(manifestJson, paramDict, ct).ConfigureAwait(false);
 
-            await RunOnUiAsync(() =>
+            await _dispatcher.RunOnUiAsync(() =>
             {
                 Status = response.Success
                     ? $"Success — {response.Message}"
@@ -100,7 +100,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await RunOnUiAsync(() =>
+            await _dispatcher.RunOnUiAsync(() =>
             {
                 Status = $"Error: {ex.Message}";
                 ResultDetail = ex.ToString();
@@ -108,7 +108,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject
         }
         finally
         {
-            await RunOnUiAsync(() => IsRunning = false).ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => IsRunning = false).ConfigureAwait(false);
         }
     }
 
@@ -124,14 +124,14 @@ public sealed partial class ActionDetailViewModel : ObservableObject
 
         if (requiresElevation && !_agentLauncher.IsElevated)
         {
-            await RunOnUiAsync(() => Status = "Waiting for elevation…").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => Status = "Waiting for elevation…").ConfigureAwait(false);
             try
             {
                 return await _agentLauncher.EnsureElevatedAsync(ct).ConfigureAwait(false);
             }
             catch (ElevationCancelledException)
             {
-                await RunOnUiAsync(() => Status = "Elevation was declined. Action not executed.").ConfigureAwait(false);
+                await _dispatcher.RunOnUiAsync(() => Status = "Elevation was declined. Action not executed.").ConfigureAwait(false);
                 return null;
             }
         }
@@ -139,31 +139,12 @@ public sealed partial class ActionDetailViewModel : ObservableObject
         var client = _agentLauncher.Client;
         if (client is null || !client.IsConnected)
         {
-            await RunOnUiAsync(() => Status = "Agent not connected.").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => Status = "Agent not connected.").ConfigureAwait(false);
             return null;
         }
         return client;
     }
 
     private bool CanExecute() => !IsRunning;
-
-    private Task RunOnUiAsync(Action action)
-    {
-        if (_dispatcher.HasThreadAccess)
-        {
-            action();
-            return Task.CompletedTask;
-        }
-
-        var tcs = new TaskCompletionSource();
-        var enqueued = _dispatcher.TryEnqueue(() =>
-        {
-            try { action(); tcs.SetResult(); }
-            catch (Exception ex) { tcs.SetException(ex); }
-        });
-        if (!enqueued)
-            tcs.SetException(new InvalidOperationException("failed to enqueue UI update"));
-        return tcs.Task;
-    }
 
 }
