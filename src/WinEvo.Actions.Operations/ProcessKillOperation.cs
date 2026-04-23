@@ -15,9 +15,6 @@ public sealed class ProcessKillOperation : IActionOperation
 {
     public string Id => "process-kill";
 
-    // System processes require elevation; user processes don't. Conservative default: false.
-    public bool RequiresElevation => false;
-
     public Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
     {
         var props = context.Step.Properties;

@@ -50,14 +50,14 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"agent: fatal: {ex}");
+            AgentLog.WriteException("fatal in broker", ex);
             return 1;
         }
     }
 
     private static int Fail(string message)
     {
-        Console.Error.WriteLine($"agent: {message}");
+        AgentLog.Write($"startup failure: {message}");
         return 2;
     }
 

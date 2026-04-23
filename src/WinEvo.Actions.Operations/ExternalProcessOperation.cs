@@ -19,9 +19,6 @@ public sealed class ExternalProcessOperation : IActionOperation
 {
     public string Id => "external-process";
 
-    // Varies by executable; runtime doesn't know, so default to false.
-    public bool RequiresElevation => false;
-
     public async Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
     {
         var path = context.RenderProperty("path");

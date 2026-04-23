@@ -12,9 +12,6 @@ public interface IActionOperation
     /// <summary>Operation id as it appears in action manifests, e.g. "registry-set".</summary>
     string Id { get; }
 
-    /// <summary>Whether this operation typically requires elevation. Informational; the runtime decides actual routing.</summary>
-    bool RequiresElevation { get; }
-
     /// <summary>Execute the operation. Implementations should render template expressions in step properties via <see cref="Templating"/>.</summary>
     Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken);
 }

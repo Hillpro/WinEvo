@@ -42,7 +42,6 @@ public sealed class AgentHost
         using (server)
         {
             AgentLog.Write($"listening on pipe '{_pipeName}' (elevated={IsElevated()})");
-            Console.WriteLine($"agent: listening on pipe '{_pipeName}' (elevated={IsElevated()})");
             await RunLoopAsync(server, ct).ConfigureAwait(false);
         }
     }
@@ -50,7 +49,7 @@ public sealed class AgentHost
     private async Task RunLoopAsync(NamedPipeServerStream server, CancellationToken ct)
     {
         await server.WaitForConnectionAsync(ct).ConfigureAwait(false);
-        Console.WriteLine("agent: client connected");
+        AgentLog.Write("client connected");
 
         try
         {
@@ -78,7 +77,7 @@ public sealed class AgentHost
         catch (OperationCanceledException) { /* graceful */ }
         finally
         {
-            Console.WriteLine("agent: client disconnected, shutting down");
+            AgentLog.Write("client disconnected, shutting down");
         }
     }
 
@@ -179,6 +178,21 @@ public sealed class AgentHost
     private async Task<PipeMessage> HandleExecuteAsync(ExecuteRequest request, CancellationToken ct)
     {
         var manifest = ManifestLoader.Parse(request.Manifest);
+
+        // Authorization boundary: refuse 'elevation: required' manifests when
+        // the agent itself isn't elevated. The Shell is expected to promote the
+        // broker via UAC before sending these; this check is the authoritative
+        // gate against a buggy or hostile caller bypassing that flow.
+        if (manifest.Requirements.Elevation == ElevationRequirement.Required && !IsElevated())
+        {
+            AgentLog.Write($"refused '{manifest.Id}': manifest requires elevation, agent is not elevated");
+            return new ExecutionResponse
+            {
+                RequestId = request.RequestId,
+                Success = false,
+                Message = "action requires elevation, but the agent is not running elevated",
+            };
+        }
 
         var rawParams = new Dictionary<string, JsonElement>();
         foreach (var (k, v) in request.Parameters)

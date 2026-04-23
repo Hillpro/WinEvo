@@ -25,9 +25,6 @@ public sealed class RegistrySetOperation : IActionOperation
 
     public string Id => "registry-set";
 
-    /// <summary>HKLM/HKCR/HKU writes require elevation; HKCU does not. Conservative default: true.</summary>
-    public bool RequiresElevation => true;
-
     public Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
     {
         try
