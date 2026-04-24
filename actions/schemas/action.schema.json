@@ -140,7 +140,7 @@
       "properties": {
         "kind":             { "const": "operation" },
         "id":               { "type": "string" },
-        "operation":        { "type": "string", "enum": ["external-process", "builtin-exe", "powershell", "command", "registry-set", "registry-delete", "registry-read", "service-stop", "service-start", "service-restart", "file-delete", "file-copy", "file-move", "process-kill", "delay", "sysinternals-tool", "dism", "system-restore-point"] },
+        "operation":        { "type": "string", "enum": ["external-process", "builtin-tool", "powershell", "command", "registry-set", "registry-delete", "registry-read", "service-stop", "service-start", "service-restart", "file-delete", "file-copy", "file-move", "process-kill", "delay", "sysinternals-tool", "dism", "system-restore-point"] },
         "progress":         { "$ref": "#/$defs/progress" },
         "timeout":          { "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 1 }] },
         "continueOnError":  { "type": "boolean", "default": false },

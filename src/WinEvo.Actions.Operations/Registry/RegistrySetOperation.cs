@@ -21,8 +21,6 @@ namespace WinEvo.Actions.Operations;
 /// </summary>
 public sealed class RegistrySetOperation : IActionOperation
 {
-    private static readonly char[] s_pathSeparators = ['\\', '/'];
-
     public string Id => "registry-set";
 
     public Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
@@ -39,8 +37,8 @@ public sealed class RegistrySetOperation : IActionOperation
             if (!context.Step.Properties.TryGetProperty("data", out var dataElement))
                 return Task.FromResult(OperationResult.Fail("missing 'data' property"));
 
-            var (hiveName, subkeyPath) = SplitHive(keyPath);
-            var root = ResolveHive(hiveName);
+            var (hiveName, subkeyPath) = RegistryPath.SplitHive(keyPath);
+            var root = RegistryPath.ResolveHive(hiveName);
             if (root is null)
                 return Task.FromResult(OperationResult.Fail($"unknown hive '{hiveName}' in key path '{keyPath}'"));
 
@@ -62,29 +60,6 @@ public sealed class RegistrySetOperation : IActionOperation
             return Task.FromResult(OperationResult.Fail(ex.GetType().Name, ex.Message));
         }
     }
-
-    /// <summary>
-    /// Splits a full registry path (e.g. <c>"HKCU\Software\Foo"</c>) into the hive
-    /// identifier and the remainder. If the path contains no separator, the entire
-    /// string is treated as the hive and the subkey is empty.
-    /// </summary>
-    private static (string hive, string subkey) SplitHive(string keyPath)
-    {
-        var separatorIndex = keyPath.IndexOfAny(s_pathSeparators);
-        if (separatorIndex < 0)
-            return (keyPath.Trim(), string.Empty);
-        return (keyPath[..separatorIndex].Trim(), keyPath[(separatorIndex + 1)..].Trim());
-    }
-
-    private static RegistryKey? ResolveHive(string hive) => hive.ToUpperInvariant() switch
-    {
-        "HKCU" or "HKEY_CURRENT_USER" => Registry.CurrentUser,
-        "HKLM" or "HKEY_LOCAL_MACHINE" => Registry.LocalMachine,
-        "HKCR" or "HKEY_CLASSES_ROOT" => Registry.ClassesRoot,
-        "HKU" or "HKEY_USERS" => Registry.Users,
-        "HKCC" or "HKEY_CURRENT_CONFIG" => Registry.CurrentConfig,
-        _ => null,
-    };
 
     private static (object value, RegistryValueKind kind) ConvertData(
         JsonElement data, string type, IReadOnlyDictionary<string, object?> parameters)

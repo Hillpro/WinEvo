@@ -29,17 +29,18 @@ Three layers of defence:
 What happens to a community manifest dropped into `%LOCALAPPDATA%\WinEvo\Actions\`:
 
 - **Parsed** — ✅ lenient parse; unknown properties ignored. *(not implemented yet)* schema validation via `JsonSchema.Net`.
-- **Rendered in the UI with declared warnings and severity** — *(not implemented yet)* — warnings parse, but severity-tier confirmation dialogs are not built.
-- **Never auto-run; the user always confirms** — ✅ execution requires an explicit click on the detail view.
-- **Executed using only built-in operations, whose implementations have been reviewed** — ✅ `registry-set`, `process-kill`, and `external-process` are wired. Manifests that use any other operation fail cleanly at runtime (`operation 'X' is not implemented`).
+- **Rendered in the UI with declared warnings and severity** — ✅ severity-adapted `ContentDialog` gates execution: `info`/`warning` show a plain Continue, `danger` requires an "I understand" checkbox, `critical` additionally requires the user to type the action name. Warning keys resolve against `resources/Strings.{en,fr}.json` with `{token}` interpolation; dedup by key with max severity per key wins.
+- **Never auto-run; the user always confirms** — ✅ execution requires an explicit click on the detail view, followed by the confirmation dialog above when warnings are declared.
+- **Executed using only built-in operations, whose implementations have been reviewed** — ✅ 8 operations wired: `registry-set`, `registry-delete`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`. Manifests that use any other operation fail cleanly at runtime (`operation 'X' is not implemented`).
 
-## `external-process`, `powershell`, and `command`
+## `external-process`, `builtin-tool`, `powershell`, and `command`
 
-These are the most powerful operations and deserve extra care. *(Only `external-process` is wired today; `powershell` and `command` are in the catalog but not implemented.)*
+These are the most powerful operations and deserve extra care.
 
 - `external-process` ✅ runs a user-supplied executable path. For community manifests the path should resolve to a system binary (`%SystemRoot%\System32\...`), a Sysinternals tool (mediated by `Tools.Sysinternals`), or a binary bundled with the manifest (future). *(not implemented yet)* — no validator currently flags arbitrary user-supplied paths or forces a `danger`-severity warning on them.
-- `powershell` *(not implemented yet)* — will run a user-supplied script; logged verbatim + transcripted; will require a `danger`-severity warning.
-- `command` *(not implemented yet)* — will run a user-supplied `cmd.exe` script. Parameter values substituted via `{{...}}` are **not** auto-escaped; reviewers will scrutinise every parameter substitution that lands in a shell command.
+- `builtin-tool` ✅ narrowed alias of `external-process` for stock Windows tools. Accepts a bare tool `name` (no path), appends `.exe` if missing, rejects any input containing `\`, `/`, `:`, or `..`, and always resolves against `Environment.SystemDirectory`. Preferred over raw `external-process` for `cipher`, `sc`, `ipconfig`, etc. because the manifest intent and the target binary are unambiguous at review time.
+- `powershell` ✅ runs a user-supplied script via `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command <script>`. `{{params.X}}` substitutions are rendered before dispatch. Community manifests using this operation should declare a `danger`-severity warning.
+- `command` ✅ runs a user-supplied `cmd.exe` script (single- or multi-line). Parameter values substituted via `{{...}}` are **not** auto-escaped; reviewers must scrutinise every parameter substitution that lands in a shell command.
 
 ## Undo *(not implemented yet)*
 

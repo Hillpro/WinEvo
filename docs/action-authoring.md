@@ -146,9 +146,9 @@ Path variables (`%SystemRoot%`, `%ProgramFiles%`, etc.) are expanded via `Enviro
 | Operation | When to use | Status |
 |---|---|---|
 | `external-process` | Argv-style invocation of an exe. Safe default — arguments are not shell-interpreted. | ✅ wired |
-| `builtin-exe` | Alias for `external-process` restricted to `%SystemRoot%\System32\*.exe`. | *(not implemented yet)* |
-| `powershell` | PowerShell script or cmdlet invocation. | *(not implemented yet)* |
-| `command` | `cmd.exe`-style script — single or multi-line — for pipes / redirects / `&&`. Substitutions are **not** auto-escaped; author is responsible for safe quoting. | *(not implemented yet)* |
+| `builtin-tool` | Narrowed `external-process` for built-in tools under `%SystemRoot%\System32`. Give the bare tool `name` (no path, `.exe` optional). | ✅ wired |
+| `powershell` | PowerShell script or cmdlet invocation. | ✅ wired |
+| `command` | `cmd.exe`-style script — single or multi-line — for pipes / redirects / `&&`. Substitutions are **not** auto-escaped; author is responsible for safe quoting. | ✅ wired |
 
 `command` shape (target):
 
@@ -161,7 +161,9 @@ Path variables (`%SystemRoot%`, `%ProgramFiles%`, etc.) are expanded via `Enviro
 }
 ```
 
-Additional operations listed in the schema but *(not implemented yet)*: `registry-delete`, `registry-read`, `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `delay`, `sysinternals-tool`, `dism`, `system-restore-point`.
+Additional wired operations: `registry-delete` (delete a value or an entire subtree — idempotent) and `delay` (cooperative wait, e.g. between `netsh disconnect` / `connect` steps).
+
+Still *(not implemented yet)*: `registry-read`, `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `sysinternals-tool`, `dism`, `system-restore-point`.
 
 ## Templating
 
