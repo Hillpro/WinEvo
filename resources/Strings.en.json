@@ -1,0 +1,8 @@
+{
+  "storage.wipe.longRunning": "This can take a while — from a few minutes up to several hours, depending on how big the drive is.",
+  "storage.wipe.destructiveHint": "Your files stay safe. This only clears what you've already deleted so it can't be recovered later.",
+
+  "undo.irreversible": "Once done, this can't be undone.",
+
+  "dryrun.storage.wipe": "This will clear deleted files from drive {drive} so they can no longer be recovered."
+}

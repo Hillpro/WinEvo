@@ -81,16 +81,35 @@ Language codes are IETF tags (`fr`, `es`, `de-AT`, …). Any field not overridde
 - **elevation** — ✅ enforced. `required` triggers the Shell's lazy UAC-promotion flow before the action runs.
 - **packageIdentity** / **minWindowsBuild** / **architectures** — *(not implemented yet)* — parsed, but not checked at runtime.
 
-## Warnings *(not implemented yet for UI gating)*
+## Warnings
 
-Each warning has a **severity** and a **resource key**. Severities will drive the UI presentation (icon, colour, required confirmation). Parsed today; not yet consulted at execute time.
+Each warning has a **severity** and a **resource key**, and optionally a `tokens` map for per-occurrence values. Keys are resolved against the shared Shell string bundle (`resources/Strings.<lang>.json`) at confirmation time; missing keys fall back to the English bundle and then to the raw key (surfaced as-is so the mistake is visible).
 
-| Severity | UI treatment (planned) |
-|---|---|
-| `info` | Small hint, no extra prompt. |
-| `warning` | Yellow banner, dismissable confirmation. |
-| `danger` | Red banner, explicit confirmation required. |
-| `critical` | Red, explicit confirmation + typed-phrase confirmation for irreversible operations. |
+| Severity | UI treatment | Status |
+|---|---|---|
+| `info` | Shown in the confirmation list; "Continue" is immediately enabled. | ✅ wired |
+| `warning` | Yellow banner; "Continue" is immediately enabled. | ✅ wired |
+| `danger` | Red banner; "I understand" checkbox gates the primary button. | ✅ wired |
+| `critical` | Red banner; checkbox **and** typed-phrase challenge (type the action name exactly) both required. | ✅ wired |
+
+When a manifest declares multiple warnings, they are deduplicated by `key` (highest severity per key wins), displayed in first-occurrence order, and the dialog's overall presentation is driven by the max severity across all remaining warnings. A manifest with no warnings executes without a confirmation dialog.
+
+```json
+"warnings": [
+  { "severity": "warning", "key": "storage.wipe.longRunning" },
+  { "severity": "info",    "key": "storage.wipe.destructiveHint" }
+]
+```
+
+Templates support `{name}` placeholders; authors supply values via a per-warning `tokens` object:
+
+```json
+{
+  "severity": "danger",
+  "key": "service.stopping",
+  "tokens": { "service": "wuauserv" }
+}
+```
 
 ## Parameters
 

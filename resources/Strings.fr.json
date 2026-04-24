@@ -1,0 +1,8 @@
+{
+  "storage.wipe.longRunning": "Cela peut prendre du temps — de quelques minutes à plusieurs heures selon la taille du disque.",
+  "storage.wipe.destructiveHint": "Vos fichiers ne sont pas touchés. Seuls les fichiers déjà supprimés sont effacés pour de bon, afin qu'ils ne puissent plus être récupérés.",
+
+  "undo.irreversible": "Une fois lancée, cette action ne peut pas être annulée.",
+
+  "dryrun.storage.wipe": "Effacera définitivement les fichiers supprimés du disque {drive} afin qu'ils ne puissent plus être récupérés."
+}

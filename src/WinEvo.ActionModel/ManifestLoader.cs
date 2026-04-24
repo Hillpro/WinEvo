@@ -92,6 +92,14 @@ public static class ManifestLoader
         var result = new List<ActionWarning>();
         foreach (var el in arr.EnumerateArray())
         {
+            Dictionary<string, string>? tokens = null;
+            if (el.TryGetProperty("tokens", out var tok) && tok.ValueKind == JsonValueKind.Object)
+            {
+                tokens = [];
+                foreach (var prop in tok.EnumerateObject())
+                    tokens[prop.Name] = prop.Value.GetString() ?? "";
+            }
+
             result.Add(new ActionWarning
             {
                 Severity = OptionalString(el, "severity") switch
@@ -102,6 +110,8 @@ public static class ManifestLoader
                     _ => WarningSeverity.Info,
                 },
                 Key = RequireString(el, "key"),
+                Tokens = (IReadOnlyDictionary<string, string>?)tokens
+                    ?? new Dictionary<string, string>(),
             });
         }
         return result;

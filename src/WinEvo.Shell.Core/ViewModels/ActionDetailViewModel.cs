@@ -18,15 +18,21 @@ public sealed partial class ActionDetailViewModel : ObservableObject
 {
     private readonly AgentLauncher _agentLauncher;
     private readonly DispatcherQueue _dispatcher;
+    private readonly IConfirmationService _confirmation;
+    private readonly StringBundle _strings;
 
     public ActionDetailViewModel(
         ActionItemViewModel item,
         string? language,
         AgentLauncher agentLauncher,
-        DispatcherQueue dispatcher)
+        DispatcherQueue dispatcher,
+        IConfirmationService confirmation,
+        StringBundle strings)
     {
         _agentLauncher = agentLauncher;
         _dispatcher = dispatcher;
+        _confirmation = confirmation;
+        _strings = strings;
         Item = item;
         Language = language;
 
@@ -66,6 +72,18 @@ public sealed partial class ActionDetailViewModel : ObservableObject
 
         try
         {
+            var warnings = WarningAggregator.Aggregate(Item.Manifest.Warnings, _strings, Language);
+            if (warnings.Count > 0)
+            {
+                var request = new ConfirmationRequest(Item.DisplayName, warnings);
+                var accepted = await _confirmation.RequestAsync(request, ct).ConfigureAwait(false);
+                if (!accepted)
+                {
+                    await _dispatcher.RunOnUiAsync(() => Status = "Cancelled by user.").ConfigureAwait(false);
+                    return;
+                }
+            }
+
             var client = await ResolveClientAsync(ct).ConfigureAwait(false);
             if (client is null)
                 return;

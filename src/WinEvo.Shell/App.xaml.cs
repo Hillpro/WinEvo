@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels;
+using WinEvo.Shell.Services;
 
 namespace WinEvo.Shell;
 
@@ -37,9 +38,15 @@ public partial class App : Application
 
         var catalog = new ActionCatalog(ActionCatalog.ResolveDefaultRoot());
         _agentLauncher = new AgentLauncher(AgentLauncher.ResolveDefaultAgentPath());
+        var strings = new StringBundle(StringBundle.ResolveDefaultRoot());
+
+        // Lazy XamlRoot capture: the lambda reads _window at call time, not at
+        // construction time
+        var confirmation = new ConfirmationDialogService(() => _window?.Content.XamlRoot);
 
         // TODO: detect system language / user preference instead of hard-coding English.
-        var viewModel = new MainViewModel(catalog, _agentLauncher, language: "en", dispatcherQueue);
+        var viewModel = new MainViewModel(
+            catalog, _agentLauncher, language: "en", dispatcherQueue, confirmation, strings);
 
         _window = new MainWindow(viewModel);
         _window.AppWindow.Closing += OnAppWindowClosing;

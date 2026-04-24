@@ -68,6 +68,8 @@ public sealed class ActionWarning
 {
     public required WarningSeverity Severity { get; init; }
     public required string Key { get; init; }
+    public IReadOnlyDictionary<string, string> Tokens { get; init; }
+        = new Dictionary<string, string>();
 }
 
 public enum WarningSeverity { Info, Warning, Danger, Critical }

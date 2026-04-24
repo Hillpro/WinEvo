@@ -38,6 +38,10 @@
     <Content Include="..\..\actions\**\*.json" LinkBase="actions">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Ship shared i18n string bundles (resolved by StringBundle at runtime). -->
+    <Content Include="..\..\resources\Strings.*.json" LinkBase="resources">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <!-- Copy WinEvo.Agent.exe (and its runtime files) into the Shell output directory

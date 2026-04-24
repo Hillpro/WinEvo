@@ -16,11 +16,6 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Padding="16,12" Spacing="12">
             <TextBlock Text="WinEvo" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
-            <TextBlock Text="•" Opacity="0.4" VerticalAlignment="Center" />
-            <TextBlock x:Name="HeaderStatus"
-                       Text="{x:Bind ViewModel.AgentStatus, Mode=OneWay}"
-                       Opacity="0.7"
-                       VerticalAlignment="Center" />
         </StackPanel>
 
         <!-- Body: master-detail -->
@@ -136,9 +131,9 @@
             </ScrollViewer>
         </Grid>
 
-        <!-- Footer -->
+        <!-- Footer: connection state, elevation, and active-execution count. -->
         <Border Grid.Row="2" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="12,6">
-            <TextBlock Text="Operations wired: registry-set, process-kill, external-process"
+            <TextBlock Text="{x:Bind ViewModel.AgentStatus, Mode=OneWay}"
                        FontSize="11" Opacity="0.6" />
         </Border>
     </Grid>
