@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations;
@@ -14,31 +13,51 @@ namespace WinEvo.Actions.Operations;
 ///   "timeout": 60 }
 /// </code>
 /// </summary>
-public sealed class ExternalProcessOperation : IActionOperation
+public sealed class ExternalProcessOperation : ActionOperation
 {
-    public string Id => "external-process";
+    public override string Id => "external-process";
 
-    public Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    public required string Path { get; init; }
+    public IReadOnlyList<string> Args { get; init; } = [];
+    public int? TimeoutSeconds { get; init; }
+
+    public static ExternalProcessOperation FromJson(JsonElement properties)
     {
-        var path = context.RenderProperty("path");
+        if (!properties.TryGetProperty("path", out var pathProp) || pathProp.ValueKind != JsonValueKind.String)
+            throw new JsonException("external-process: missing or non-string 'path' property");
+        return new ExternalProcessOperation
+        {
+            Path = pathProp.GetString()!,
+            Args = ParseArgs(properties),
+            TimeoutSeconds = ParseTimeout(properties),
+        };
+    }
+
+    public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    {
+        var path = RenderProperty(Path, context);
         if (string.IsNullOrWhiteSpace(path))
             return Task.FromResult(OperationResult.Fail("missing 'path' property"));
 
         var psi = new ProcessStartInfo { FileName = path };
-        foreach (var arg in ExtractArgs(context.Step.Properties, context.Parameters))
-            psi.ArgumentList.Add(arg);
+        foreach (var arg in Args)
+            psi.ArgumentList.Add(RenderProperty(arg, context));
 
-        return ProcessRunner.RunAsync(psi, context, cancellationToken);
+        return ProcessRunner.RunAsync(psi, TimeoutSeconds, context, cancellationToken);
     }
 
-    private static string[] ExtractArgs(JsonElement props, IReadOnlyDictionary<string, object?> parameters)
+    internal static string[] ParseArgs(JsonElement properties)
     {
-        if (!props.TryGetProperty("args", out var arr) || arr.ValueKind != JsonValueKind.Array)
+        if (!properties.TryGetProperty("args", out var arr) || arr.ValueKind != JsonValueKind.Array)
             return [];
-
         return arr.EnumerateArray()
             .Where(e => e.ValueKind == JsonValueKind.String)
-            .Select(e => Templating.Render(e.GetString() ?? "", parameters))
+            .Select(e => e.GetString() ?? "")
             .ToArray();
     }
+
+    internal static int? ParseTimeout(JsonElement properties)
+        => properties.TryGetProperty("timeout", out var t) && t.ValueKind == JsonValueKind.Number
+            ? t.GetInt32()
+            : null;
 }

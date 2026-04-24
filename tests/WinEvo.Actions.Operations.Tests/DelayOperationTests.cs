@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations.Tests;
@@ -10,10 +9,9 @@ public class DelayOperationTests
     [Fact]
     public async Task Waits_for_the_requested_duration()
     {
+        var op = DelayOperation.FromJson(Props("""{"seconds":0.2}"""));
         var sw = Stopwatch.StartNew();
-        var result = await new DelayOperation().ExecuteAsync(
-            Context("""{"operation":"delay","seconds":0.2}"""),
-            TestContext.Current.CancellationToken);
+        var result = await op.ExecuteAsync(OperationTestContext.Empty(), TestContext.Current.CancellationToken);
         sw.Stop();
 
         Assert.True(result.Success, result.Error);
@@ -24,10 +22,9 @@ public class DelayOperationTests
     [Fact]
     public async Task Cancellation_returns_promptly()
     {
+        var op = DelayOperation.FromJson(Props("""{"seconds":30}"""));
         using var cts = new CancellationTokenSource();
-        var task = new DelayOperation().ExecuteAsync(
-            Context("""{"operation":"delay","seconds":30}"""),
-            cts.Token);
+        var task = op.ExecuteAsync(OperationTestContext.Empty(), cts.Token);
 
         cts.CancelAfter(TimeSpan.FromMilliseconds(50));
         var sw = Stopwatch.StartNew();
@@ -41,25 +38,17 @@ public class DelayOperationTests
     }
 
     [Fact]
-    public async Task Missing_seconds_fails_without_waiting()
+    public void Missing_seconds_fails_at_parse_time()
     {
-        var sw = Stopwatch.StartNew();
-        var result = await new DelayOperation().ExecuteAsync(
-            Context("""{"operation":"delay"}"""),
-            TestContext.Current.CancellationToken);
-        sw.Stop();
-
-        Assert.False(result.Success);
-        Assert.Contains("missing", result.Error);
-        Assert.True(sw.Elapsed < TimeSpan.FromMilliseconds(200));
+        var ex = Assert.Throws<JsonException>(() => DelayOperation.FromJson(Props("""{}""")));
+        Assert.Contains("missing", ex.Message);
     }
 
     [Fact]
-    public async Task Negative_seconds_fails()
+    public async Task Negative_seconds_fails_at_execute_time()
     {
-        var result = await new DelayOperation().ExecuteAsync(
-            Context("""{"operation":"delay","seconds":-1}"""),
-            TestContext.Current.CancellationToken);
+        var op = DelayOperation.FromJson(Props("""{"seconds":-1}"""));
+        var result = await op.ExecuteAsync(OperationTestContext.Empty(), TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("non-negative", result.Error);
@@ -68,28 +57,13 @@ public class DelayOperationTests
     [Fact]
     public async Task Seconds_from_templated_parameter()
     {
-        var result = await new DelayOperation().ExecuteAsync(
-            Context(
-                """{"operation":"delay","seconds":"{{params.wait}}"}""",
-                parameters: new Dictionary<string, object?> { ["wait"] = "0.1" }),
-            TestContext.Current.CancellationToken);
+        var op = DelayOperation.FromJson(Props("""{"seconds":"{{params.wait}}"}"""));
+        var ctx = OperationTestContext.WithParameters(new Dictionary<string, object?> { ["wait"] = "0.1" });
+
+        var result = await op.ExecuteAsync(ctx, TestContext.Current.CancellationToken);
 
         Assert.True(result.Success, result.Error);
     }
 
-    private static OperationContext Context(
-        string propertiesJson,
-        IReadOnlyDictionary<string, object?>? parameters = null)
-    {
-        var root = JsonDocument.Parse(propertiesJson).RootElement.Clone();
-        return new OperationContext
-        {
-            Step = new OperationStep
-            {
-                Operation = root.GetProperty("operation").GetString()!,
-                Properties = root,
-            },
-            Parameters = parameters ?? new Dictionary<string, object?>(),
-        };
-    }
+    private static JsonElement Props(string json) => JsonDocument.Parse(json).RootElement.Clone();
 }

@@ -1,23 +1,24 @@
 using System.Text.Json;
 using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
-using WinEvo.Actions.Operations;
 using WinEvo.Ipc;
 
 namespace WinEvo.Agent.Core;
 
 /// <summary>
-/// Runs an <see cref="ActionManifest"/> step-by-step using the registered
-/// operations. TODO: sub-action steps are not yet expanded; they are reported
-/// as a skipped/failed step result.
+/// Runs an <see cref="ActionManifest"/> step-by-step, hydrating each manifest
+/// operation into a typed <see cref="ActionOperation"/> via the injected
+/// <see cref="IOperationParser"/> before dispatching it.
+/// TODO: sub-action steps are not yet expanded; they are reported as a
+/// skipped/failed step result.
 /// </summary>
 public sealed class ActionExecutor
 {
-    private readonly OperationCatalog _operations;
+    private readonly IOperationParser _parser;
 
-    public ActionExecutor(OperationCatalog operations)
+    public ActionExecutor(IOperationParser parser)
     {
-        _operations = operations;
+        _parser = parser;
     }
 
     public async Task<ExecutionResponse> ExecuteAsync(
@@ -49,17 +50,22 @@ public sealed class ActionExecutor
                 continue;
             }
 
-            if (step is not OperationStep op)
+            if (step is not OperationStep opStep)
                 continue;
 
-            if (!_operations.TryGet(op.Operation, out var impl))
+            ActionOperation op;
+            try
+            {
+                op = _parser.Parse(opStep.Operation, opStep.RawProperties);
+            }
+            catch (Exception ex)
             {
                 stepResults.Add(new StepResult
                 {
                     StepId = step.Id,
-                    Operation = op.Operation,
+                    Operation = opStep.Operation,
                     Success = false,
-                    Error = $"operation '{op.Operation}' is not implemented",
+                    Error = $"failed to parse operation: {ex.Message}",
                 });
                 if (!continueOnErrorMode && !step.ContinueOnError)
                     break;
@@ -68,15 +74,14 @@ public sealed class ActionExecutor
 
             var context = new OperationContext
             {
-                Step = op,
                 Parameters = parameters,
-                LogSink = line => log.Add($"[{step.Id ?? op.Operation}] {line}"),
+                LogSink = line => log.Add($"[{step.Id ?? opStep.Operation}] {line}"),
             };
 
             OperationResult result;
             try
             {
-                result = await impl.ExecuteAsync(context, ct).ConfigureAwait(false);
+                result = await op.ExecuteAsync(context, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -86,7 +91,7 @@ public sealed class ActionExecutor
             stepResults.Add(new StepResult
             {
                 StepId = step.Id,
-                Operation = op.Operation,
+                Operation = opStep.Operation,
                 Success = result.Success,
                 Message = result.Message,
                 Error = result.Error,

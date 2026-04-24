@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations;
@@ -16,13 +17,27 @@ namespace WinEvo.Actions.Operations;
 /// arguments, prefer <c>external-process</c>: it avoids cmd.exe's quoting
 /// quirks and doesn't spin up a shell interpreter.
 /// </summary>
-public sealed class CommandOperation : IActionOperation
+public sealed class CommandOperation : ActionOperation
 {
-    public string Id => "command";
+    public override string Id => "command";
 
-    public Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    public required string Command { get; init; }
+    public int? TimeoutSeconds { get; init; }
+
+    public static CommandOperation FromJson(JsonElement properties)
     {
-        var command = context.RenderProperty("command");
+        if (!properties.TryGetProperty("command", out var cmd) || cmd.ValueKind != JsonValueKind.String)
+            throw new JsonException("command: missing or non-string 'command' property");
+        return new CommandOperation
+        {
+            Command = cmd.GetString()!,
+            TimeoutSeconds = ExternalProcessOperation.ParseTimeout(properties),
+        };
+    }
+
+    public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    {
+        var command = RenderProperty(Command, context);
         if (string.IsNullOrWhiteSpace(command))
             return Task.FromResult(OperationResult.Fail("missing 'command' property"));
 
@@ -37,6 +52,6 @@ public sealed class CommandOperation : IActionOperation
             Arguments = $"/C {command}",
         };
 
-        return ProcessRunner.RunAsync(psi, context, cancellationToken);
+        return ProcessRunner.RunAsync(psi, TimeoutSeconds, context, cancellationToken);
     }
 }

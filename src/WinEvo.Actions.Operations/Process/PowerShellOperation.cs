@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations;
@@ -16,13 +17,27 @@ namespace WinEvo.Actions.Operations;
 /// profile and execution policy don't change the outcome. Template expressions
 /// <c>{{params.X}}</c> in the script are rendered before dispatch.
 /// </summary>
-public sealed class PowerShellOperation : IActionOperation
+public sealed class PowerShellOperation : ActionOperation
 {
-    public string Id => "powershell";
+    public override string Id => "powershell";
 
-    public Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    public required string Script { get; init; }
+    public int? TimeoutSeconds { get; init; }
+
+    public static PowerShellOperation FromJson(JsonElement properties)
     {
-        var script = context.RenderProperty("script");
+        if (!properties.TryGetProperty("script", out var s) || s.ValueKind != JsonValueKind.String)
+            throw new JsonException("powershell: missing or non-string 'script' property");
+        return new PowerShellOperation
+        {
+            Script = s.GetString()!,
+            TimeoutSeconds = ExternalProcessOperation.ParseTimeout(properties),
+        };
+    }
+
+    public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    {
+        var script = RenderProperty(Script, context);
         if (string.IsNullOrWhiteSpace(script))
             return Task.FromResult(OperationResult.Fail("missing 'script' property"));
 
@@ -34,6 +49,6 @@ public sealed class PowerShellOperation : IActionOperation
         psi.ArgumentList.Add("-Command");
         psi.ArgumentList.Add(script);
 
-        return ProcessRunner.RunAsync(psi, context, cancellationToken);
+        return ProcessRunner.RunAsync(psi, TimeoutSeconds, context, cancellationToken);
     }
 }

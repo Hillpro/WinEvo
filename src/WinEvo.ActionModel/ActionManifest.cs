@@ -158,11 +158,17 @@ public sealed class OperationStep : ActionStep
     public required string Operation { get; init; }
 
     /// <summary>
-    /// Raw JSON of the step, preserved so each operation can read whatever
-    /// keys it understands (e.g. <c>path</c>, <c>args</c>, <c>key</c>,
-    /// <c>value</c>, <c>data</c>, <c>timeout</c>).
+    /// Opaque JSON payload carrying the operation's per-type properties
+    /// (<c>path</c>, <c>args</c>, <c>key</c>, <c>value</c>, <c>data</c>,
+    /// <c>timeout</c>, …). Consumed exclusively by <c>IOperationParser.Parse</c>
+    /// downstream in <c>Actions.Abstractions</c>; no other consumer should
+    /// read from this field. Every operation's typed shape lives on its
+    /// <c>ActionOperation</c> subclass after parsing. If you find yourself
+    /// reaching into this <see cref="JsonElement"/> from inside an operation
+    /// body (or anywhere else in the execution path), you're bypassing the
+    /// typed seam — promote the field onto the operation's subclass instead.
     /// </summary>
-    public required JsonElement Properties { get; init; }
+    public required JsonElement RawProperties { get; init; }
 }
 
 /// <summary>Step that invokes another action manifest. TODO: executor does not expand these yet.</summary>

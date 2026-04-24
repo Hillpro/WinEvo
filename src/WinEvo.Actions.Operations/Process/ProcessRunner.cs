@@ -1,24 +1,24 @@
 using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations;
 
 /// <summary>
 /// Shared child-process runner used by the operations that spawn an executable
-/// (<c>external-process</c>, <c>powershell</c>, <c>command</c>). Takes a
-/// caller-built <see cref="ProcessStartInfo"/>, forces stdio redirection,
-/// honors both the manifest-level <c>timeout</c> property and the outer
-/// cancellation token, and maps the exit code to a uniform <see cref="OperationResult"/>.
-/// The child is killed on timeout or cancellation; the agent's Job Object
-/// (<see cref="WinEvo.Agent.Core.JobObject"/>) then propagates the kill to
-/// any grandchildren the script may have spawned.
+/// (<c>external-process</c>, <c>powershell</c>, <c>command</c>, <c>builtin-tool</c>).
+/// Takes a caller-built <see cref="ProcessStartInfo"/>, forces stdio redirection,
+/// honors both the step-level timeout and the outer cancellation token, and
+/// maps the exit code to a uniform <see cref="OperationResult"/>. The child is
+/// killed on timeout or cancellation; the agent's Job Object
+/// (<see cref="WinEvo.Agent.Core.JobObject"/>) then propagates the kill to any
+/// grandchildren the script may have spawned.
 /// </summary>
 internal static class ProcessRunner
 {
     public static async Task<OperationResult> RunAsync(
         ProcessStartInfo psi,
+        int? timeoutSeconds,
         OperationContext context,
         CancellationToken ct)
     {
@@ -41,9 +41,8 @@ internal static class ProcessRunner
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            var timeoutSeconds = ReadTimeoutSeconds(context.Step.Properties);
             var timeoutCts = timeoutSeconds > 0
-                ? new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds))
+                ? new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds.Value))
                 : null;
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(
                 ct, timeoutCts?.Token ?? CancellationToken.None);
@@ -76,11 +75,6 @@ internal static class ProcessRunner
             return OperationResult.Fail(ex.GetType().Name, ex.Message);
         }
     }
-
-    private static int ReadTimeoutSeconds(JsonElement props)
-        => props.TryGetProperty("timeout", out var t) && t.ValueKind == JsonValueKind.Number
-            ? t.GetInt32()
-            : 0;
 
     private static string FormatArgs(ProcessStartInfo psi)
         => psi.ArgumentList.Count > 0 ? string.Join(' ', psi.ArgumentList) : psi.Arguments;

@@ -142,7 +142,8 @@ Parameters are rendered in the Shell as form fields and bound by id into the exe
 Supported parameter `type`s (v1): `string`, `integer`, `boolean`, `enum`, `drive`, `wifi-profile`, `file-path`, `directory-path`, `service-name`.
 
 - ✅ **Binding + substitution** works — every declared parameter becomes a form field in the detail view and is templated into operation properties at execute time.
-- *(not implemented yet)* **Type-specific pickers** — currently every parameter renders as a plain text box regardless of `type`. Drive pickers, Wi-Fi profile pickers, enum dropdowns, boolean toggles, etc. will land alongside the type-aware UI.
+- ✅ **Type-specific pickers** (partial) — `string` / unknown → TextBox; `integer` → NumberBox honoring `min` / `max`; `boolean` → ToggleSwitch; `enum` → ComboBox populated from `choices`; `drive` → ComboBox of live drives filtered by `filter.driveType`.
+- *(not implemented yet)* Pickers for `wifi-profile`, `file-path`, `directory-path`, `service-name` — these fall back to the TextBox renderer until a dedicated widget ships.
 
 ## Execution
 
@@ -323,7 +324,9 @@ Functions may be composed. Nested template references are not supported.
 Manifests can only compose **existing** operations. To add a fundamentally new operation kind (e.g. "set per-app GPU preference"):
 
 1. Open an issue describing the need.
-2. Add the operation to `WinEvo.Actions.Operations` as a class implementing `IActionOperation`.
-3. Add its id to the enum in `actions/schemas/action.schema.json`.
-4. Register the operation in `OperationCatalog.Default()`.
-5. Submit a PR. This is the trusted-code boundary; expect review on security, undo correctness, and dry-run support.
+2. Add the operation to `WinEvo.Actions.Operations` as a `sealed class` inheriting `ActionOperation`. Declare each manifest field as a `required` init property (e.g. `public required string Key { get; init; }`).
+3. Implement `public static <YourOp> FromJson(JsonElement properties)` — read the raw JSON once, construct the typed instance, throw `JsonException` on missing required fields.
+4. Implement `public override Task<OperationResult> ExecuteAsync(OperationContext ctx, CancellationToken ct)` using the typed fields; render user-templated strings via the inherited `RenderProperty(value, ctx)` helper.
+5. Add its id to the enum in `actions/schemas/action.schema.json`.
+6. Register the operation in `OperationParser`'s factory dictionary: `["your-op"] = YourOperation.FromJson`.
+7. Submit a PR. This is the trusted-code boundary; expect review on security, undo correctness, and dry-run support.

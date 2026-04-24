@@ -13,13 +13,23 @@ namespace WinEvo.Actions.Operations;
 /// Cooperatively cancellable via the outer token. Useful between steps that
 /// need a settle delay (e.g. netsh disconnect/connect sequences).
 /// </summary>
-public sealed class DelayOperation : IActionOperation
+public sealed class DelayOperation : ActionOperation
 {
-    public string Id => "delay";
+    public override string Id => "delay";
 
-    public async Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    /// <summary>Either a literal number of seconds, or a template string that renders to one (e.g. <c>"{{params.wait}}"</c>).</summary>
+    public required JsonElement Seconds { get; init; }
+
+    public static DelayOperation FromJson(JsonElement properties)
     {
-        if (!TryReadSeconds(context, out var seconds, out var error))
+        if (!properties.TryGetProperty("seconds", out var seconds))
+            throw new JsonException("delay: missing 'seconds' property");
+        return new DelayOperation { Seconds = seconds.Clone() };
+    }
+
+    public override async Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    {
+        if (!TryResolveSeconds(context, out var seconds, out var error))
             return OperationResult.Fail(error);
 
         try
@@ -34,22 +44,16 @@ public sealed class DelayOperation : IActionOperation
         }
     }
 
-    private static bool TryReadSeconds(OperationContext context, out double seconds, out string error)
+    private bool TryResolveSeconds(OperationContext context, out double seconds, out string error)
     {
         seconds = 0;
-        if (!context.Step.Properties.TryGetProperty("seconds", out var prop))
-        {
-            error = "missing 'seconds' property";
-            return false;
-        }
-
-        switch (prop.ValueKind)
+        switch (Seconds.ValueKind)
         {
             case JsonValueKind.Number:
-                seconds = prop.GetDouble();
+                seconds = Seconds.GetDouble();
                 break;
             case JsonValueKind.String:
-                var rendered = Templating.Render(prop.GetString() ?? "", context.Parameters);
+                var rendered = RenderProperty(Seconds.GetString() ?? "", context);
                 if (!double.TryParse(rendered, NumberStyles.Float, CultureInfo.InvariantCulture, out seconds))
                 {
                     error = $"'seconds' is not a number: '{rendered}'";

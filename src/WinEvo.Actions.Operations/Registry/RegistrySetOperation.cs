@@ -19,23 +19,45 @@ namespace WinEvo.Actions.Operations;
 /// <c>HKCU</c>, <c>HKEY_CURRENT_USER</c>, <c>HKLM</c>, <c>HKEY_LOCAL_MACHINE</c>, <c>HKCR</c>,
 /// <c>HKEY_CLASSES_ROOT</c>, <c>HKU</c>, <c>HKEY_USERS</c>, <c>HKCC</c>, <c>HKEY_CURRENT_CONFIG</c>.
 /// </summary>
-public sealed class RegistrySetOperation : IActionOperation
+public sealed class RegistrySetOperation : ActionOperation
 {
-    public string Id => "registry-set";
+    public override string Id => "registry-set";
 
-    public Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    public required string Key { get; init; }
+    public required string Value { get; init; }
+    public required string DataType { get; init; }
+
+    /// <summary>Raw JSON of the value to write; interpreted according to <see cref="DataType"/>.</summary>
+    public required JsonElement Data { get; init; }
+
+    /// <summary>If true, the undo engine (when wired) will capture the prior value before writing.</summary>
+    public bool BackupForUndo { get; init; }
+
+    public static RegistrySetOperation FromJson(JsonElement properties)
+    {
+        if (!properties.TryGetProperty("data", out var data))
+            throw new JsonException("registry-set: missing 'data' property");
+        return new RegistrySetOperation
+        {
+            Key = RequireString(properties, "key"),
+            Value = RequireString(properties, "value"),
+            DataType = RequireString(properties, "type"),
+            Data = data.Clone(),
+            BackupForUndo = properties.TryGetProperty("backupForUndo", out var b)
+                && b.ValueKind == JsonValueKind.True,
+        };
+    }
+
+    public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
     {
         try
         {
-            var keyPath = context.RenderProperty("key");
-            var valueName = context.RenderProperty("value");
-            var type = context.RenderProperty("type").ToUpperInvariant();
+            var keyPath = RenderProperty(Key, context);
+            var valueName = RenderProperty(Value, context);
+            var type = RenderProperty(DataType, context).ToUpperInvariant();
 
             if (string.IsNullOrWhiteSpace(keyPath))
                 return Task.FromResult(OperationResult.Fail("missing 'key' property"));
-
-            if (!context.Step.Properties.TryGetProperty("data", out var dataElement))
-                return Task.FromResult(OperationResult.Fail("missing 'data' property"));
 
             var (hiveName, subkeyPath) = RegistryPath.SplitHive(keyPath);
             var root = RegistryPath.ResolveHive(hiveName);
@@ -45,7 +67,7 @@ public sealed class RegistrySetOperation : IActionOperation
             using var key = root.CreateSubKey(subkeyPath, writable: true)
                 ?? throw new InvalidOperationException($"unable to open key '{subkeyPath}'");
 
-            var (value, kind) = ConvertData(dataElement, type, context.Parameters);
+            var (value, kind) = ConvertData(Data, type, context.Parameters);
             key.SetValue(valueName, value, kind);
 
             context.Log($"set {hiveName}\\{subkeyPath}\\{valueName} = {value} ({kind})");
@@ -61,6 +83,13 @@ public sealed class RegistrySetOperation : IActionOperation
         }
     }
 
+    private static string RequireString(JsonElement el, string property)
+    {
+        if (!el.TryGetProperty(property, out var value) || value.ValueKind != JsonValueKind.String)
+            throw new JsonException($"registry-set: missing or non-string '{property}' property");
+        return value.GetString()!;
+    }
+
     private static (object value, RegistryValueKind kind) ConvertData(
         JsonElement data, string type, IReadOnlyDictionary<string, object?> parameters)
     {
@@ -73,7 +102,6 @@ public sealed class RegistrySetOperation : IActionOperation
             "MULTI_STRING" or "REG_MULTI_SZ" => (ReadStringArray(data, parameters), RegistryValueKind.MultiString),
             _ => throw new InvalidOperationException($"unsupported type '{type}'"),
         };
-
     }
 
     private static int ReadInt32(JsonElement data, IReadOnlyDictionary<string, object?> parameters) => data.ValueKind switch

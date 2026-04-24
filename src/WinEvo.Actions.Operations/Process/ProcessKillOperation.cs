@@ -10,54 +10,61 @@ namespace WinEvo.Actions.Operations;
 /// { "operation": "process-kill", "name": "SearchUI" }
 /// { "operation": "process-kill", "pid": 1234 }
 /// </code>
+/// Exactly one of <see cref="Name"/> / <see cref="Pid"/> is set after parsing.
 /// </summary>
-public sealed class ProcessKillOperation : IActionOperation
+public sealed class ProcessKillOperation : ActionOperation
 {
-    public string Id => "process-kill";
+    public override string Id => "process-kill";
 
-    public Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    public string? Name { get; init; }
+    public int? Pid { get; init; }
+
+    public static ProcessKillOperation FromJson(JsonElement properties)
     {
-        var props = context.Step.Properties;
-        var killed = 0;
+        if (properties.TryGetProperty("pid", out var pid) && pid.ValueKind == JsonValueKind.Number)
+            return new ProcessKillOperation { Pid = pid.GetInt32() };
+        if (properties.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String)
+            return new ProcessKillOperation { Name = name.GetString() };
+        throw new JsonException("process-kill: neither 'name' nor 'pid' provided");
+    }
 
+    public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    {
         try
         {
-            if (props.TryGetProperty("pid", out var pidElement) && pidElement.ValueKind == JsonValueKind.Number)
+            if (Pid is int pid)
             {
-                var pid = pidElement.GetInt32();
                 using var process = Process.GetProcessById(pid);
                 process.Kill(entireProcessTree: true);
                 process.WaitForExit(5_000);
-                killed = 1;
                 context.Log($"killed pid {pid}");
+                return Task.FromResult(OperationResult.Ok("killed 1 process(es)"));
             }
-            else
+
+            var name = RenderProperty(Name ?? "", context);
+            if (string.IsNullOrWhiteSpace(name))
+                return Task.FromResult(OperationResult.Fail("neither 'name' nor 'pid' provided"));
+
+            var killed = 0;
+            var processes = Process.GetProcessesByName(name);
+            foreach (var process in processes)
             {
-                var name = context.RenderProperty("name");
-                if (string.IsNullOrWhiteSpace(name))
-                    return Task.FromResult(OperationResult.Fail("neither 'name' nor 'pid' provided"));
-
-                var processes = Process.GetProcessesByName(name);
-                foreach (var process in processes)
+                try
                 {
-                    try
-                    {
-                        process.Kill(entireProcessTree: true);
-                        process.WaitForExit(5_000);
-                        killed++;
-                    }
-                    catch (Exception ex)
-                    {
-                        context.Log($"failed to kill '{name}' (pid {process.Id}): {ex.Message}");
-                    }
-                    finally
-                    {
-                        process.Dispose();
-                    }
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(5_000);
+                    killed++;
                 }
-                context.Log($"killed {killed} process(es) named '{name}'");
+                catch (Exception ex)
+                {
+                    context.Log($"failed to kill '{name}' (pid {process.Id}): {ex.Message}");
+                }
+                finally
+                {
+                    process.Dispose();
+                }
             }
-
+            context.Log($"killed {killed} process(es) named '{name}'");
             return Task.FromResult(OperationResult.Ok($"killed {killed} process(es)"));
         }
         catch (ArgumentException)

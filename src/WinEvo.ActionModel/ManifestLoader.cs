@@ -229,7 +229,7 @@ public static class ManifestLoader
                 Id = id,
                 ContinueOnError = continueOnError,
                 Operation = RequireString(el, "operation"),
-                Properties = el.Clone(),
+                RawProperties = el.Clone(),
             },
             "sub-action" => new SubActionStep
             {

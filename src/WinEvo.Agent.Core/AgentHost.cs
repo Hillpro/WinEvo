@@ -3,6 +3,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
 using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 using WinEvo.Actions.Operations;
 using WinEvo.Ipc;
 
@@ -16,14 +17,14 @@ namespace WinEvo.Agent.Core;
 public sealed class AgentHost
 {
     private readonly string _pipeName;
-    private readonly OperationCatalog _operations;
+    private readonly IOperationParser _parser;
     private readonly ActionExecutor _executor;
 
-    public AgentHost(string pipeName, OperationCatalog? operations = null)
+    public AgentHost(string pipeName, IOperationParser? parser = null)
     {
         _pipeName = pipeName;
-        _operations = operations ?? OperationCatalog.Default();
-        _executor = new ActionExecutor(_operations);
+        _parser = parser ?? new OperationParser();
+        _executor = new ActionExecutor(_parser);
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -110,7 +111,7 @@ public sealed class AgentHost
             RequestId = hs.RequestId,
             AgentVersion = typeof(AgentHost).Assembly.GetName().Version?.ToString() ?? "0.1.0",
             AgentProtocolVersion = 1,
-            SupportedOperations = _operations.SupportedIds.ToArray(),
+            SupportedOperations = _parser.SupportedIds.ToArray(),
         },
         ExecuteRequest exec => await HandleExecuteAsync(exec, ct).ConfigureAwait(false),
         _ => new ErrorResponse { RequestId = request.RequestId, Message = "unsupported message type" },

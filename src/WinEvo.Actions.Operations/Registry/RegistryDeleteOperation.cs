@@ -1,3 +1,4 @@
+using System.Text.Json;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations;
@@ -14,20 +15,38 @@ namespace WinEvo.Actions.Operations;
 /// { "operation": "registry-delete",
 ///   "key": "HKCU\\Software\\Foo" }
 /// </code>
-/// When <c>value</c> is present (even as an empty string — the default-value
-/// slot), only that value is removed. When <c>value</c> is absent, the whole
-/// subkey tree under <c>key</c> is removed. Idempotent: deleting something
-/// that is already absent succeeds.
+/// When <see cref="ValueName"/> is present (even as an empty string — the
+/// default-value slot), only that value is removed. When it's <see langword="null"/>,
+/// the whole subkey tree under <see cref="Key"/> is removed. Idempotent:
+/// deleting something that is already absent succeeds.
 /// </summary>
-public sealed class RegistryDeleteOperation : IActionOperation
+public sealed class RegistryDeleteOperation : ActionOperation
 {
-    public string Id => "registry-delete";
+    public override string Id => "registry-delete";
 
-    public Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
+    public required string Key { get; init; }
+
+    /// <summary>Name of the value to delete. <see langword="null"/> means "delete the whole key tree."</summary>
+    public string? ValueName { get; init; }
+
+    public static RegistryDeleteOperation FromJson(JsonElement properties)
+    {
+        if (!properties.TryGetProperty("key", out var keyProp) || keyProp.ValueKind != JsonValueKind.String)
+            throw new JsonException("registry-delete: missing or non-string 'key' property");
+        return new RegistryDeleteOperation
+        {
+            Key = keyProp.GetString()!,
+            ValueName = properties.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.String
+                ? v.GetString()
+                : null,
+        };
+    }
+
+    public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
     {
         try
         {
-            var keyPath = context.RenderProperty("key");
+            var keyPath = RenderProperty(Key, context);
             if (string.IsNullOrWhiteSpace(keyPath))
                 return Task.FromResult(OperationResult.Fail("missing 'key' property"));
 
@@ -36,14 +55,9 @@ public sealed class RegistryDeleteOperation : IActionOperation
             if (root is null)
                 return Task.FromResult(OperationResult.Fail($"unknown hive '{hiveName}' in key path '{keyPath}'"));
 
-            // Value property presence (not emptiness) selects between value- and
-            // key-delete. An empty string IS the "default value" of a key.
-            var deletingValue = context.Step.Properties.TryGetProperty("value", out var valueProp)
-                && valueProp.ValueKind == System.Text.Json.JsonValueKind.String;
-
-            if (deletingValue)
+            if (ValueName is not null)
             {
-                var valueName = context.RenderProperty("value");
+                var valueName = RenderProperty(ValueName, context);
                 if (string.IsNullOrEmpty(subkeyPath))
                     return Task.FromResult(OperationResult.Fail($"cannot delete values from hive root '{hiveName}'"));
 

@@ -1,7 +1,5 @@
 using System.Text.Json;
 using Microsoft.Win32;
-using WinEvo.ActionModel;
-using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations.Tests;
 
@@ -37,9 +35,8 @@ public sealed class RegistryDeleteOperationTests : IDisposable
             key.SetValue("Remove", 2, RegistryValueKind.DWord);
         }
 
-        var result = await new RegistryDeleteOperation().ExecuteAsync(
-            Context(new { operation = "registry-delete", key = _fullPath, value = "Remove" }),
-            TestContext.Current.CancellationToken);
+        var op = new RegistryDeleteOperation { Key = _fullPath, ValueName = "Remove" };
+        var result = await op.ExecuteAsync(OperationTestContext.Empty(), TestContext.Current.CancellationToken);
 
         Assert.True(result.Success, result.Error);
 
@@ -54,9 +51,8 @@ public sealed class RegistryDeleteOperationTests : IDisposable
     {
         using (var key = Registry.CurrentUser.CreateSubKey(_sandboxSubkey, writable: true)!) { }
 
-        var result = await new RegistryDeleteOperation().ExecuteAsync(
-            Context(new { operation = "registry-delete", key = _fullPath, value = "NeverWas" }),
-            TestContext.Current.CancellationToken);
+        var op = new RegistryDeleteOperation { Key = _fullPath, ValueName = "NeverWas" };
+        var result = await op.ExecuteAsync(OperationTestContext.Empty(), TestContext.Current.CancellationToken);
 
         Assert.True(result.Success, result.Error);
     }
@@ -69,9 +65,8 @@ public sealed class RegistryDeleteOperationTests : IDisposable
             key.SetValue("V", "deep");
         }
 
-        var result = await new RegistryDeleteOperation().ExecuteAsync(
-            Context(new { operation = "registry-delete", key = _fullPath }),
-            TestContext.Current.CancellationToken);
+        var op = new RegistryDeleteOperation { Key = _fullPath, ValueName = null };
+        var result = await op.ExecuteAsync(OperationTestContext.Empty(), TestContext.Current.CancellationToken);
 
         Assert.True(result.Success, result.Error);
         Assert.Null(Registry.CurrentUser.OpenSubKey(_sandboxSubkey));
@@ -81,9 +76,8 @@ public sealed class RegistryDeleteOperationTests : IDisposable
     public async Task Deleting_missing_key_is_idempotent()
     {
         // _sandboxSubkey was never created.
-        var result = await new RegistryDeleteOperation().ExecuteAsync(
-            Context(new { operation = "registry-delete", key = _fullPath }),
-            TestContext.Current.CancellationToken);
+        var op = new RegistryDeleteOperation { Key = _fullPath, ValueName = null };
+        var result = await op.ExecuteAsync(OperationTestContext.Empty(), TestContext.Current.CancellationToken);
 
         Assert.True(result.Success, result.Error);
     }
@@ -91,9 +85,8 @@ public sealed class RegistryDeleteOperationTests : IDisposable
     [Fact]
     public async Task Refuses_to_delete_hive_root()
     {
-        var result = await new RegistryDeleteOperation().ExecuteAsync(
-            Context(new { operation = "registry-delete", key = "HKCU" }),
-            TestContext.Current.CancellationToken);
+        var op = new RegistryDeleteOperation { Key = "HKCU", ValueName = null };
+        var result = await op.ExecuteAsync(OperationTestContext.Empty(), TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("hive root", result.Error);
@@ -102,37 +95,18 @@ public sealed class RegistryDeleteOperationTests : IDisposable
     [Fact]
     public async Task Unknown_hive_fails()
     {
-        var result = await new RegistryDeleteOperation().ExecuteAsync(
-            Context(new { operation = "registry-delete", key = "HKXX\\Whatever" }),
-            TestContext.Current.CancellationToken);
+        var op = new RegistryDeleteOperation { Key = "HKXX\\Whatever", ValueName = null };
+        var result = await op.ExecuteAsync(OperationTestContext.Empty(), TestContext.Current.CancellationToken);
 
         Assert.False(result.Success);
         Assert.Contains("unknown hive", result.Error);
     }
 
     [Fact]
-    public async Task Missing_key_property_fails()
+    public void Missing_key_property_fails_at_parse_time()
     {
-        var result = await new RegistryDeleteOperation().ExecuteAsync(
-            Context(new { operation = "registry-delete" }),
-            TestContext.Current.CancellationToken);
-
-        Assert.False(result.Success);
-        Assert.Contains("missing", result.Error);
-    }
-
-    private static OperationContext Context(object properties)
-    {
-        var json = JsonSerializer.Serialize(properties);
-        var root = JsonDocument.Parse(json).RootElement.Clone();
-        return new OperationContext
-        {
-            Step = new OperationStep
-            {
-                Operation = root.GetProperty("operation").GetString()!,
-                Properties = root,
-            },
-            Parameters = new Dictionary<string, object?>(),
-        };
+        var ex = Assert.Throws<JsonException>(() => RegistryDeleteOperation.FromJson(
+            JsonDocument.Parse("""{}""").RootElement.Clone()));
+        Assert.Contains("missing", ex.Message);
     }
 }
