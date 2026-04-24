@@ -40,9 +40,8 @@ message HandshakeRequest {
 message HandshakeResponse {
   int32 agent_protocol_version = 1;
   string agent_version = 2;
-  AgentMode mode = 3;
-  repeated string supported_operations = 4;
-  repeated string capability_flags = 5;
+  repeated string supported_operations = 3;
+  repeated string capability_flags = 4;
 }
 
 enum AgentMode {

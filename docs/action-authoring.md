@@ -1,6 +1,30 @@
 # Authoring Actions
 
-> **Implementation status.** The manifest loader, the three wired operations (`registry-set`, `process-kill`, `external-process`), the `ExecutionMode` enum, `{{params.X}}` substitution, and localised `name` / `description` are live. Many schema features below are still *target design* — they parse cleanly but have no runtime effect yet. Look for *(not implemented yet)* markers on specific sections.
+> **Implementation status.** The manifest loader, the `ExecutionMode` enum, `{{params.X}}` substitution, and localized `name` / `description` are live. Operation coverage:
+>
+> | Operation              | Status          |
+> |------------------------|-----------------|
+> | `registry-set`         | ✅ wired        |
+> | `registry-delete`      | ✅ wired        |
+> | `process-kill`         | ✅ wired        |
+> | `external-process`     | ✅ wired        |
+> | `builtin-tool`         | ✅ wired        |
+> | `powershell`           | ✅ wired        |
+> | `command`              | ✅ wired        |
+> | `delay`                | ✅ wired        |
+> | `registry-read`        | 🔲 target       |
+> | `service-stop`         | 🔲 target       |
+> | `service-start`        | 🔲 target       |
+> | `service-restart`      | 🔲 target       |
+> | `file-delete`          | 🔲 target       |
+> | `file-copy`            | 🔲 target       |
+> | `file-move`            | 🔲 target       |
+> | `sysinternals-tool`    | 🔲 target       |
+> | `system-restore-point` | 🔲 target       |
+>
+> DISM, SFC, and similar System32 tools don't need a dedicated operation — invoke them through `builtin-tool`.
+>
+> Other schema features (undo, dry-run, sub-action execution, template functions, JSON-Schema validation at load time) parse cleanly but have no runtime effect yet — look for *(not implemented yet)* markers on specific sections.
 
 An **action** in WinEvo is a JSON document describing what to do, what to warn the user about, what parameters to collect, and (eventually) how to undo the change. Actions live in `actions/<category>/<id>.json` (shipped with the app) or `%LOCALAPPDATA%\WinEvo\Actions\<category>\<id>.json` (added by users).
 
@@ -163,7 +187,7 @@ Path variables (`%SystemRoot%`, `%ProgramFiles%`, etc.) are expanded via `Enviro
 
 Additional wired operations: `registry-delete` (delete a value or an entire subtree — idempotent) and `delay` (cooperative wait, e.g. between `netsh disconnect` / `connect` steps).
 
-Still *(not implemented yet)*: `registry-read`, `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `sysinternals-tool`, `dism`, `system-restore-point`.
+Still *(not implemented yet)*: `registry-read`, `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `sysinternals-tool`, `system-restore-point`.
 
 ## Templating
 

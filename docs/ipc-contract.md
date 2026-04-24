@@ -13,7 +13,9 @@ Target: gRPC over a named pipe, using `Grpc.Net.Client.ConnectCallback` on the c
 | Service | `\\.\pipe\WinEvo.Agent.System` | `LocalSystem`, interactive user SIDs currently logged in |
 | Broker  | `\\.\pipe\WinEvo.Agent.User.{sessionId}` | Interactive user SID of `sessionId` only |
 
-ACLs are applied via `PipeSecurity` when the pipe is created. The agent creates a single server instance and accepts multiple concurrent clients (Shell, Tray, future CLI).
+> **Current vs target.** The broker pipe is named `WinEvo.Agent.User` today (no `{sessionId}` suffix); see the TODO in [`PipeNames.cs`](../src/WinEvo.Ipc/PipeNames.cs). The service pipe isn't created yet — service mode itself is unimplemented.
+
+ACLs are applied via `PipeSecurity` when the pipe is created. **Today the agent accepts a single client at a time** (`maxNumberOfServerInstances: 1` in [`AgentHost.cs`](../src/WinEvo.Agent.Core/AgentHost.cs)); multi-client fan-out (Shell + Tray + future CLI on the same agent) is target design.
 
 ## Client authentication
 
@@ -36,14 +38,11 @@ message HandshakeRequest {
 }
 
 message HandshakeResponse {
-  int32  agent_protocol_version   = 1;
-  string agent_version            = 2;
-  AgentMode mode                  = 3;  // SERVICE | BROKER
-  repeated string supported_operations = 4;
-  repeated string capability_flags     = 5;
+  int32  agent_protocol_version        = 1;
+  string agent_version                 = 2;
+  repeated string supported_operations = 3;
+  repeated string capability_flags     = 4;
 }
-
-enum AgentMode { SERVICE = 0; BROKER = 1; }
 ```
 
 ### Versioning policy

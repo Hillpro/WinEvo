@@ -26,7 +26,7 @@ public sealed class OperationCatalog
         new CommandOperation(),
         new DelayOperation(),
         // TODO: registry-read, service-stop, service-start, service-restart,
-        //       file-delete, file-copy, file-move, sysinternals-tool, dism,
+        //       file-delete, file-copy, file-move, sysinternals-tool,
         //       system-restore-point.
     ]);
 

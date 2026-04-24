@@ -4,7 +4,7 @@ An open-source optimizer and tweaker for Windows 11, built as a WinUI 3 applicat
 
 ## Status
 
-🚧 **Pre-alpha.** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions with a severity-gated confirmation dialog. Eight operations are wired (`registry-set`, `registry-delete`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`); `registry-read`, `service-*`, `file-*`, `dism`, `system-restore-point`, `sysinternals-tool` are still TODO. Spawned children are kept under a Windows Job Object so they die with the agent. IPC is length-prefixed JSON over a named pipe; gRPC (`.proto` already defined) is the target transport.
+🚧 **Pre-alpha.** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions with a severity-gated confirmation dialog. Eight operations are wired (`registry-set`, `registry-delete`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`); `registry-read`, `service-*`, `file-*`, `system-restore-point`, `sysinternals-tool` are still TODO. Spawned children are kept under a Windows Job Object so they die with the agent. IPC is length-prefixed JSON over a named pipe; gRPC (`.proto` already defined) is the target transport.
 
 ## Goals
 
