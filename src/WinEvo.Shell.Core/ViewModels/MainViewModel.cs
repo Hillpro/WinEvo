@@ -21,6 +21,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly DispatcherQueue _dispatcher;
     private readonly IConfirmationService _confirmation;
     private readonly StringBundle _strings;
+    private readonly IParameterInputFactory _parameterFactory;
 
     public MainViewModel(
         ActionCatalog catalog,
@@ -28,7 +29,8 @@ public sealed partial class MainViewModel : ObservableObject
         string? language,
         DispatcherQueue dispatcher,
         IConfirmationService confirmation,
-        StringBundle strings)
+        StringBundle strings,
+        IParameterInputFactory parameterFactory)
     {
         _catalog = catalog;
         _agentLauncher = agentLauncher;
@@ -36,6 +38,7 @@ public sealed partial class MainViewModel : ObservableObject
         _dispatcher = dispatcher;
         _confirmation = confirmation;
         _strings = strings;
+        _parameterFactory = parameterFactory;
         _agentLauncher.StateChanged += OnAgentStateChanged;
     }
 
@@ -54,7 +57,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Detail = value is null
             ? null
-            : new ActionDetailViewModel(value, _language, _agentLauncher, _dispatcher, _confirmation, _strings);
+            : new ActionDetailViewModel(value, _language, _agentLauncher, _dispatcher, _confirmation, _strings, _parameterFactory);
     }
 
     partial void OnDetailChanged(ActionDetailViewModel? oldValue, ActionDetailViewModel? newValue)

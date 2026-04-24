@@ -44,9 +44,11 @@ public partial class App : Application
         // construction time
         var confirmation = new ConfirmationDialogService(() => _window?.Content.XamlRoot);
 
+        var parameterFactory = new ParameterInputFactory(new SystemDriveProvider());
+
         // TODO: detect system language / user preference instead of hard-coding English.
         var viewModel = new MainViewModel(
-            catalog, _agentLauncher, language: "en", dispatcherQueue, confirmation, strings);
+            catalog, _agentLauncher, language: "en", dispatcherQueue, confirmation, strings, parameterFactory);
 
         _window = new MainWindow(viewModel);
         _window.AppWindow.Closing += OnAppWindowClosing;

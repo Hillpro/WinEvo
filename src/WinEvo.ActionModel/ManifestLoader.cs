@@ -124,23 +124,59 @@ public static class ManifestLoader
 
         var result = new List<Parameter>();
         foreach (var el in arr.EnumerateArray())
+            result.Add(ParseParameter(el));
+        return result;
+    }
+
+    private static Parameter ParseParameter(JsonElement el)
+    {
+        var id = RequireString(el, "id");
+        var type = RequireString(el, "type");
+        var name = OptionalString(el, "name");
+        var description = OptionalString(el, "description");
+        var required = el.TryGetProperty("required", out var r) && r.ValueKind == JsonValueKind.True;
+        JsonElement? @default = el.TryGetProperty("default", out var d) ? d.Clone() : null;
+
+        return type switch
         {
-            result.Add(new Parameter
+            "integer" => new IntegerParameter
             {
-                Id = RequireString(el, "id"),
-                Type = RequireString(el, "type"),
-                Name = OptionalString(el, "name"),
-                Description = OptionalString(el, "description"),
-                Required = el.TryGetProperty("required", out var r) && r.ValueKind == JsonValueKind.True,
-                Default = el.TryGetProperty("default", out var d) ? d.Clone() : null,
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
                 Min = el.TryGetProperty("min", out var mn) && mn.ValueKind == JsonValueKind.Number ? mn.GetInt32() : null,
                 Max = el.TryGetProperty("max", out var mx) && mx.ValueKind == JsonValueKind.Number ? mx.GetInt32() : null,
-                Choices = el.TryGetProperty("choices", out var ch) && ch.ValueKind == JsonValueKind.Array
-                    ? ch.EnumerateArray().Select(x => x.GetString() ?? "").ToArray()
-                    : null,
-            });
-        }
-        return result;
+            },
+            "boolean" => new BooleanParameter
+            {
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
+            },
+            "enum" => new EnumParameter
+            {
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
+                Choices = ParseStringArray(el, "choices"),
+            },
+            "drive" => new DriveParameter
+            {
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
+                AllowedDriveTypes = ParseAllowedDriveTypes(el),
+            },
+            _ => new StringParameter
+            {
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
+            },
+        };
+    }
+
+    private static string[]? ParseAllowedDriveTypes(JsonElement parameter)
+    {
+        if (!parameter.TryGetProperty("filter", out var filter) || filter.ValueKind != JsonValueKind.Object)
+            return null;
+        if (!filter.TryGetProperty("driveType", out var arr) || arr.ValueKind != JsonValueKind.Array)
+            return null;
+
+        return arr.EnumerateArray()
+            .Where(e => e.ValueKind == JsonValueKind.String)
+            .Select(e => e.GetString()!)
+            .ToArray();
     }
 
     private static Execution ParseExecution(JsonElement root)

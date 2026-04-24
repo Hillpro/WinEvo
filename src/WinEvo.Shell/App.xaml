@@ -10,6 +10,12 @@
                      styles like AccentButtonStyle, CardStrokeColorDefaultBrush, etc.).
                      Without this, x:Bind / ThemeResource lookups fail at parse time. -->
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+
+                <!-- Parameter-picker DataTemplates + selector. Consumers reference
+                     {StaticResource ParameterInputTemplateSelector} from any XAML
+                     in the Shell. Adding a new parameter type touches only
+                     ParameterInputResources.xaml, not the consumers. -->
+                <ResourceDictionary Source="ms-appx:///Resources/ParameterInputResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

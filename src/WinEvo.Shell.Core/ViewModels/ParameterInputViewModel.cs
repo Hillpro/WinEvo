@@ -5,53 +5,35 @@ using WinEvo.ActionModel;
 namespace WinEvo.Shell.Core.ViewModels;
 
 /// <summary>
-/// Holds the user-entered value for one action parameter. Every parameter is
-/// currently rendered as a text field in the UI. TODO: type-specific pickers
-/// (drive, wifi-profile, enum dropdown, boolean toggle, etc.).
+/// Base for a single action parameter's input VM. Concrete subclasses own the
+/// type-specific storage and widget-binding surface; a
+/// <see cref="Services.IParameterInputFactory"/> picks the right subclass per
+/// <see cref="Parameter.Type"/>. Matching <c>DataTemplate</c>s in the Shell are
+/// selected at render time by <c>ParameterInputTemplateSelector</c>.
 /// </summary>
-public sealed partial class ParameterInputViewModel : ObservableObject
+public abstract class ParameterInputViewModel : ObservableObject
 {
-    public ParameterInputViewModel(Parameter parameter, string? language)
+    protected ParameterInputViewModel(Parameter parameter, string? language)
     {
         Parameter = parameter;
-        DisplayName = ResolveName(parameter, language);
-        DisplayDescription = ResolveDescription(parameter, language);
-        Value = parameter.Default is { } def && def.ValueKind != System.Text.Json.JsonValueKind.Null
-            ? def.ToString()
-            : "";
+        DisplayName = parameter.Name ?? parameter.Id;
+        DisplayDescription = parameter.Description;
+        _ = language; // Localization hook — per-parameter overrides resolved by the factory caller if needed.
     }
 
     public Parameter Parameter { get; }
-    public string DisplayName { get; }
-    public string? DisplayDescription { get; }
     public string Id => Parameter.Id;
     public string Type => Parameter.Type;
     public bool Required => Parameter.Required;
+    public string DisplayName { get; }
+    public string? DisplayDescription { get; }
 
-    [ObservableProperty]
-    public partial string Value { get; set; }
+    /// <summary>
+    /// True when the user has supplied a usable value. The <c>Execute</c>
+    /// button uses this to surface missing-required warnings.
+    /// </summary>
+    public abstract bool HasValue { get; }
 
-    /// <summary>Converts the current text value into a <see cref="JsonNode"/> appropriate for the parameter's type.</summary>
-    public JsonNode? ToJsonValue()
-    {
-        if (string.IsNullOrEmpty(Value))
-            return null;
-
-        return Type switch
-        {
-            "integer" => long.TryParse(Value, out var i) ? JsonValue.Create(i) : JsonValue.Create(Value),
-            "boolean" => JsonValue.Create(Value.Equals("true", StringComparison.OrdinalIgnoreCase)),
-            _ => JsonValue.Create(Value),
-        };
-    }
-
-    private static string ResolveName(Parameter p, string? lang)
-    {
-        // LocalizationEntry.parameters is parent-scoped; per-parameter name overrides
-        // are resolved against the owning manifest's Localization map by the caller
-        // when it has access. Here we fall back to the base English name.
-        return p.Name ?? p.Id;
-    }
-
-    private static string? ResolveDescription(Parameter p, string? lang) => p.Description;
+    /// <summary>Serialise the current input to the IPC wire format.</summary>
+    public abstract JsonNode? ToJsonValue();
 }

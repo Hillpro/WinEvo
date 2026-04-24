@@ -74,7 +74,13 @@ public sealed class ActionWarning
 
 public enum WarningSeverity { Info, Warning, Danger, Critical }
 
-public sealed class Parameter
+/// <summary>
+/// One declared parameter on an action manifest. Common fields live here;
+/// type-specific metadata (min/max, choices, drive-type filter, …) lives on
+/// the concrete subclass. <see cref="ManifestLoader"/> picks the subclass
+/// based on the manifest's <c>type</c> string.
+/// </summary>
+public abstract class Parameter
 {
     public required string Id { get; init; }
     public required string Type { get; init; }
@@ -82,9 +88,41 @@ public sealed class Parameter
     public string? Description { get; init; }
     public bool Required { get; init; }
     public JsonElement? Default { get; init; }
+}
+
+/// <summary>
+/// Catch-all parameter for types without dedicated metadata today: schema's
+/// <c>string</c>, <c>wifi-profile</c>, <c>file-path</c>, <c>directory-path</c>,
+/// <c>service-name</c>. When one of these grows type-specific fields, promote
+/// it to its own subclass.
+/// </summary>
+public sealed class StringParameter : Parameter
+{
+}
+
+public sealed class BooleanParameter : Parameter
+{
+}
+
+public sealed class IntegerParameter : Parameter
+{
     public int? Min { get; init; }
     public int? Max { get; init; }
-    public IReadOnlyList<string>? Choices { get; init; }
+}
+
+public sealed class EnumParameter : Parameter
+{
+    public required IReadOnlyList<string> Choices { get; init; }
+}
+
+public sealed class DriveParameter : Parameter
+{
+    /// <summary>
+    /// Drive types the picker should expose (e.g. <c>fixed</c>, <c>removable</c>).
+    /// Maps to the manifest's <c>filter.driveType</c> array. <see langword="null"/>
+    /// means no filter — show all mounted drives.
+    /// </summary>
+    public IReadOnlyList<string>? AllowedDriveTypes { get; init; }
 }
 
 public sealed class Execution

@@ -27,7 +27,8 @@ public sealed partial class ActionDetailViewModel : ObservableObject
         AgentLauncher agentLauncher,
         DispatcherQueue dispatcher,
         IConfirmationService confirmation,
-        StringBundle strings)
+        StringBundle strings,
+        IParameterInputFactory parameterFactory)
     {
         _agentLauncher = agentLauncher;
         _dispatcher = dispatcher;
@@ -37,7 +38,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject
         Language = language;
 
         foreach (var p in item.Manifest.Parameters)
-            Parameters.Add(new ParameterInputViewModel(p, language));
+            Parameters.Add(parameterFactory.Create(p, language));
     }
 
     public ActionItemViewModel Item { get; }
@@ -58,7 +59,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject
     private async Task ExecuteAsync(CancellationToken ct)
     {
         var missingRequired = Parameters
-            .Where(p => p.Required && string.IsNullOrWhiteSpace(p.Value))
+            .Where(p => p.Required && !p.HasValue)
             .ToList();
         if (missingRequired.Count > 0)
         {

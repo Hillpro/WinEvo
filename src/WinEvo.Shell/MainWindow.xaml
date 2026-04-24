@@ -81,21 +81,9 @@
                         <StackPanel Spacing="8"
                                     Visibility="{x:Bind ParametersVisibility(ViewModel.Detail), Mode=OneWay}">
                             <TextBlock Text="Parameters" FontWeight="SemiBold" />
-                            <ItemsControl ItemsSource="{x:Bind ViewModel.Detail.Parameters, Mode=OneWay}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ParameterInputViewModel">
-                                        <StackPanel Spacing="4" Margin="0,0,0,12">
-                                            <TextBlock>
-                                                <Run Text="{x:Bind DisplayName}" />
-                                                <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <Run Text="{x:Bind Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            </TextBlock>
-                                            <TextBox Text="{x:Bind Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <ItemsControl
+                                ItemsSource="{x:Bind ViewModel.Detail.Parameters, Mode=OneWay}"
+                                ItemTemplateSelector="{StaticResource ParameterInputTemplateSelector}" />
                         </StackPanel>
 
                         <!-- Execute -->

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    App-wide templates for action-parameter pickers. Merged into
+    Application.Resources via App.xaml so any XAML in the Shell can reference
+    ParameterInputTemplateSelector via {StaticResource ParameterInputTemplateSelector}.
+
+    Note: these DataTemplates use {Binding}, not {x:Bind}/x:DataType. The WinUI
+    3 XAML compiler rejects x:DataType inside a standalone merged
+    ResourceDictionary (silent XamlCompiler.exe exit 1). Compile-time binding
+    only works inside the same XAML file as the consumer; shared templates use
+    {Binding} and rely on the item DataContext set by the ItemsControl.
+
+    Adding a new parameter type means:
+      1. A new ParameterInputViewModel subclass in WinEvo.Shell.Core.
+      2. A new property on ParameterInputTemplateSelector.
+      3. A new DataTemplate slot below.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WinEvo.Shell">
+
+    <local:ParameterInputTemplateSelector x:Key="ParameterInputTemplateSelector">
+        <local:ParameterInputTemplateSelector.StringTemplate>
+            <DataTemplate>
+                <StackPanel Spacing="4" Margin="0,0,0,12">
+                    <TextBlock>
+                        <Run Text="{Binding DisplayName}" />
+                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </TextBlock>
+                    <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+            </DataTemplate>
+        </local:ParameterInputTemplateSelector.StringTemplate>
+        <local:ParameterInputTemplateSelector.IntegerTemplate>
+            <DataTemplate>
+                <StackPanel Spacing="4" Margin="0,0,0,12">
+                    <TextBlock>
+                        <Run Text="{Binding DisplayName}" />
+                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </TextBlock>
+                    <NumberBox
+                        Value="{Binding Value, Mode=TwoWay}"
+                        Minimum="{Binding Minimum}"
+                        Maximum="{Binding Maximum}"
+                        SpinButtonPlacementMode="Inline"
+                        HorizontalAlignment="Stretch" />
+                </StackPanel>
+            </DataTemplate>
+        </local:ParameterInputTemplateSelector.IntegerTemplate>
+        <local:ParameterInputTemplateSelector.BooleanTemplate>
+            <DataTemplate>
+                <StackPanel Spacing="4" Margin="0,0,0,12">
+                    <TextBlock>
+                        <Run Text="{Binding DisplayName}" />
+                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </TextBlock>
+                    <ToggleSwitch IsOn="{Binding Value, Mode=TwoWay}" />
+                </StackPanel>
+            </DataTemplate>
+        </local:ParameterInputTemplateSelector.BooleanTemplate>
+        <local:ParameterInputTemplateSelector.EnumTemplate>
+            <DataTemplate>
+                <StackPanel Spacing="4" Margin="0,0,0,12">
+                    <TextBlock>
+                        <Run Text="{Binding DisplayName}" />
+                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </TextBlock>
+                    <ComboBox
+                        ItemsSource="{Binding Choices}"
+                        SelectedItem="{Binding SelectedChoice, Mode=TwoWay}"
+                        HorizontalAlignment="Stretch" />
+                </StackPanel>
+            </DataTemplate>
+        </local:ParameterInputTemplateSelector.EnumTemplate>
+        <local:ParameterInputTemplateSelector.DriveTemplate>
+            <DataTemplate>
+                <StackPanel Spacing="4" Margin="0,0,0,12">
+                    <TextBlock>
+                        <Run Text="{Binding DisplayName}" />
+                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </TextBlock>
+                    <ComboBox
+                        ItemsSource="{Binding DriveOptions}"
+                        SelectedItem="{Binding SelectedDrive, Mode=TwoWay}"
+                        DisplayMemberPath="Label"
+                        PlaceholderText="No drives available"
+                        HorizontalAlignment="Stretch" />
+                </StackPanel>
+            </DataTemplate>
+        </local:ParameterInputTemplateSelector.DriveTemplate>
+    </local:ParameterInputTemplateSelector>
+
+</ResourceDictionary>
