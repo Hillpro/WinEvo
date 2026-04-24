@@ -4,7 +4,7 @@ namespace WinEvo.Actions.Operations;
 
 /// <summary>
 /// Maps operation ids (as they appear in manifests) to <see cref="IActionOperation"/>
-/// implementations. Three operations wired; others are TODO.
+/// implementations. Five operations wired; others are TODO.
 /// </summary>
 public sealed class OperationCatalog
 {
@@ -20,8 +20,10 @@ public sealed class OperationCatalog
         new RegistrySetOperation(),
         new ProcessKillOperation(),
         new ExternalProcessOperation(),
-        // TODO: builtin-exe, powershell, command, registry-delete, registry-read,
-        //       service-stop, service-start, service-restart, file-delete, file-copy,
+        new PowerShellOperation(),
+        new CommandOperation(),
+        // TODO: builtin-exe, registry-delete, registry-read, service-stop,
+        //       service-start, service-restart, file-delete, file-copy,
         //       file-move, delay, sysinternals-tool, dism, system-restore-point.
     ]);
 
