@@ -39,7 +39,7 @@ public sealed class ActionCatalog
             catch (Exception ex)
             {
                 // Log and skip — a single malformed manifest shouldn't block the whole catalog.
-                Console.Error.WriteLine($"catalog: failed to load '{file}': {ex.Message}");
+                ShellLog.WriteException($"catalog: failed to load '{file}'", ex);
             }
         }
     }

@@ -2,6 +2,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using WinEvo.Shell.Core;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels;
 using WinEvo.Shell.Services;
@@ -23,6 +24,18 @@ public partial class App : Application
 
     public App()
     {
+        // Wire crash-logging hooks before InitializeComponent so a XAML parser
+        // exception during startup still leaves an artifact behind.
+        //
+        // Raw managed crashes (AppDomain)
+        AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
+        // GC-finalised unobserved Task faults (TaskScheduler)
+        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+        // WinUI dispatcher (Application)
+        UnhandledException += OnApplicationUnhandledException;
+
+        ShellLog.Write($"shell starting (log: {ShellLog.FilePath})");
+
         InitializeComponent();
     }
 
@@ -120,5 +133,36 @@ public partial class App : Application
             XamlRoot = _window!.Content.XamlRoot,
         };
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+    
+    private void OnApplicationUnhandledException(
+        object sender,
+        Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    {
+        ShellLog.WriteException(
+            $"Application.UnhandledException (handled={e.Handled})",
+            e.Exception);
+        // Don't set e.Handled = true
+        // Let the framework's default crash behavior continue.
+    }
+
+    private static void OnDomainUnhandledException(
+        object sender,
+        System.UnhandledExceptionEventArgs e)
+    {
+        var ex = e.ExceptionObject as Exception
+            ?? new InvalidOperationException(e.ExceptionObject?.ToString() ?? "(null)");
+        ShellLog.WriteException(
+            $"AppDomain.UnhandledException (terminating={e.IsTerminating})",
+            ex);
+    }
+
+    private static void OnUnobservedTaskException(
+        object? sender,
+        UnobservedTaskExceptionEventArgs e)
+    {
+        ShellLog.WriteException("TaskScheduler.UnobservedTaskException", e.Exception);
+        // Deliberately do not call e.SetObserved().
+        // Unobserved exceptions are fatal by default
     }
 }

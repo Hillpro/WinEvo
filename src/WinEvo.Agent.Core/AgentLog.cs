@@ -11,7 +11,7 @@ public static class AgentLog
     private static readonly string s_path =
         Path.Combine(Path.GetTempPath(), "winevo-agent.log");
 
-    private static readonly object s_gate = new();
+    private static readonly Lock s_gate = new();
 
     public static string FilePath => s_path;
 
