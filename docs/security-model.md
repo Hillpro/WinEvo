@@ -44,7 +44,7 @@ These are the most powerful operations and deserve extra care.
 
 ## Undo *(not implemented yet)*
 
-Per-operation undo will capture the minimum state needed to revert. Nothing is wired today — `backupForUndo: true` in a manifest parses but has no runtime effect.
+Per-operation undo will capture the minimum state needed to revert. Nothing is wired today. The `undo` block and per-step `backupForUndo: true` flag have been stripped from the live schema for alpha; both are preserved in [manifest-reference/](manifest-reference/) as the target shape. The runtime parser is more lenient than the live schema and still tolerates a stray `backupForUndo` as a no-op, but new manifests should not declare it.
 
 Target shape:
 
@@ -59,7 +59,7 @@ Undo state will live in `%ProgramData%\WinEvo\UndoStore\<exec-id>.json` with an 
 
 ## Restore points *(not implemented yet)*
 
-Opt-in per manifest (`execution.createRestorePoint: true`). When wired, the agent will create a System Restore Point before the first step. Restore points are **defence in depth**, not the primary recovery path.
+Opt-in per manifest (target shape: `execution.createRestorePoint: true`). When wired, the agent will create a System Restore Point before the first step. Restore points are **defence in depth**, not the primary recovery path. The `createRestorePoint` field has been stripped from the live schema for alpha and lives in [manifest-reference/](manifest-reference/) until the `system-restore-point` operation is wired.
 
 ## Audit log
 

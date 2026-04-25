@@ -2,35 +2,37 @@
 
 > **Implementation status.** The manifest loader, the `ExecutionMode` enum, `{{params.X}}` substitution, and localized `name` / `description` are live. Operation coverage:
 >
-> | Operation              | Status          |
-> |------------------------|-----------------|
-> | `registry-set`         | ✅ wired        |
-> | `registry-delete`      | ✅ wired        |
-> | `process-kill`         | ✅ wired        |
-> | `external-process`     | ✅ wired        |
-> | `builtin-tool`         | ✅ wired        |
-> | `powershell`           | ✅ wired        |
-> | `command`              | ✅ wired        |
-> | `delay`                | ✅ wired        |
-> | `registry-read`        | 🔲 target       |
-> | `service-stop`         | 🔲 target       |
-> | `service-start`        | 🔲 target       |
-> | `service-restart`      | 🔲 target       |
-> | `file-delete`          | 🔲 target       |
-> | `file-copy`            | 🔲 target       |
-> | `file-move`            | 🔲 target       |
-> | `sysinternals-tool`    | 🔲 target       |
-> | `system-restore-point` | 🔲 target       |
+> | Operation              | Status    | In live schema? |
+> |------------------------|-----------|-----------------|
+> | `registry-set`         | ✅ wired  | yes             |
+> | `registry-delete`      | ✅ wired  | yes             |
+> | `process-kill`         | ✅ wired  | yes             |
+> | `external-process`     | ✅ wired  | yes             |
+> | `builtin-tool`         | ✅ wired  | yes             |
+> | `powershell`           | ✅ wired  | yes             |
+> | `command`              | ✅ wired  | yes             |
+> | `delay`                | ✅ wired  | yes             |
+> | `registry-read`        | 🔲 target | reference only  |
+> | `service-stop`         | 🔲 target | reference only  |
+> | `service-start`        | 🔲 target | reference only  |
+> | `service-restart`      | 🔲 target | reference only  |
+> | `file-delete`          | 🔲 target | reference only  |
+> | `file-copy`            | 🔲 target | reference only  |
+> | `file-move`            | 🔲 target | reference only  |
+> | `sysinternals-tool`    | 🔲 target | reference only  |
+> | `system-restore-point` | 🔲 target | reference only  |
 >
 > DISM, SFC, and similar System32 tools don't need a dedicated operation — invoke them through `builtin-tool`.
 >
-> Other schema features (undo, dry-run, sub-action execution, template functions, JSON-Schema validation at load time) parse cleanly but have no runtime effect yet — look for *(not implemented yet)* markers on specific sections.
+> **Live schema vs reference schema.** The live schema at [../actions/schemas/action.schema.json](../actions/schemas/action.schema.json) is alpha-trimmed: it accepts only what the runtime actually consumes. Sections in this guide marked *(reference only)* describe target features that have been stripped from the live schema and live in [../docs/manifest-reference/](manifest-reference/) until the engine catches up — `undo`, `dryRun`, `preconditions`, sub-action steps, restore points, progress events, OS/arch/package gates, and the operations marked *reference only* above. The runtime parser is more lenient than the live schema (it still tolerates some stripped fields as no-ops or runtime-failures), so manifests authored against the reference schema today don't crash, but a future JSON-Schema validator will reject them — author against the **live** schema for anything you intend to ship.
 
 An **action** in WinEvo is a JSON document describing what to do, what to warn the user about, what parameters to collect, and (eventually) how to undo the change. Actions live in `actions/<category>/<id>.json` (shipped with the app) or `%LOCALAPPDATA%\WinEvo\Actions\<category>\<id>.json` (added by users).
 
 The schema is in [../actions/schemas/action.schema.json](../actions/schemas/action.schema.json). Point your editor at it for autocomplete and validation.
 
 ## File skeleton
+
+Live (alpha) schema:
 
 ```json
 {
@@ -47,14 +49,13 @@ The schema is in [../actions/schemas/action.schema.json](../actions/schemas/acti
   "requirements": { ... },
   "warnings":     [ ... ],
   "parameters":   [ ... ],
-  "preconditions":[ ... ],
   "execution":    { ... },
-  "undo":         { ... },
-  "dryRun":       { ... },
 
   "localization": { "fr": { "name": "...", "description": "..." } }
 }
 ```
+
+The reference schema in [manifest-reference/](manifest-reference/) additionally has top-level `preconditions`, `undo`, and `dryRun` blocks; those are described below as *(reference only)*.
 
 ## Identifiers
 
@@ -89,21 +90,21 @@ Language codes are IETF tags (`fr`, `es`, `de-AT`, …). Any field not overridde
 **Two distinct mechanisms:**
 
 - **Inline localization** (above) — ✅ for text unique to this manifest.
-- **Resource-key references** *(not implemented yet)* — for text shared across many manifests. Used by `warnings[].key`, `undo.reason`, `dryRun.preview`. The runtime will resolve these keys from shared string bundles (`resources/Strings.<lang>.resx` in the Shell), so a generic warning like "this action is destructive" is translated once and reused everywhere.
+- **Resource-key references** — for text shared across many manifests. Used by `warnings[].key` ✅ wired (resolved against `resources/Strings.{en,fr}.json`), and by `undo.reason` / `dryRun.preview` *(reference only — those blocks live in [manifest-reference/](manifest-reference/))*. A generic warning like "this action is destructive" is translated once and reused everywhere.
 
 ## Requirements
 
+Live (alpha) schema:
+
 ```json
 "requirements": {
-  "elevation": "required | not-required | optional",
-  "packageIdentity": "required | optional | forbidden",
-  "minWindowsBuild": 22000,
-  "architectures": ["x64", "arm64"]
+  "elevation": "required | not-required | optional"
 }
 ```
 
 - **elevation** — ✅ enforced. `required` triggers the Shell's lazy UAC-promotion flow before the action runs.
-- **packageIdentity** / **minWindowsBuild** / **architectures** — *(not implemented yet)* — parsed, but not checked at runtime.
+
+*(reference only)* The target schema also carries `packageIdentity`, `minWindowsBuild`, `architectures`, `minAgentVersion`, and `disabled` — these were stripped from the live schema because the runtime never consults them. They live in [manifest-reference/action.schema.json](manifest-reference/action.schema.json).
 
 ## Warnings
 
@@ -159,10 +160,11 @@ Supported parameter `type`s (v1): `string`, `integer`, `boolean`, `enum`, `drive
   "operation": "external-process",
   "path": "%SystemRoot%\\System32\\cipher.exe",
   "args": ["/w:{{params.drive}}"],
-  "timeout": null,
-  "progress": { "type": "indeterminate" }
+  "timeout": null
 }
 ```
+
+*(reference only)* A `progress: { "type": "indeterminate" | "determinate", "parser": "..." }` block on a step is target-design for the streaming-events transport. Stripped from the live schema; see [manifest-reference/](manifest-reference/).
 
 Path variables (`%SystemRoot%`, `%ProgramFiles%`, etc.) are expanded via `Environment.ExpandEnvironmentVariables` at execution time.
 
@@ -188,13 +190,15 @@ Path variables (`%SystemRoot%`, `%ProgramFiles%`, etc.) are expanded via `Enviro
 
 Additional wired operations: `registry-delete` (delete a value or an entire subtree — idempotent) and `delay` (cooperative wait, e.g. between `netsh disconnect` / `connect` steps).
 
-Still *(not implemented yet)*: `registry-read`, `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `sysinternals-tool`, `system-restore-point`.
+Still *(reference only)*: `registry-read`, `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `sysinternals-tool`, `system-restore-point`. None are in the live schema; they live in [manifest-reference/action.schema.json](manifest-reference/action.schema.json) and will be added back as each operation is wired.
 
 ## Templating
 
 Wherever a string is executed, `{{params.<id>}}` substitutes the parameter value. ✅ Works today. The substitution is **shell-neutral** — args are passed as an argv array for `external-process`, so no quoting or escaping is needed or allowed.
 
-## Undo *(not implemented yet)*
+## Undo *(reference only)*
+
+This block was stripped from the live schema for alpha (it claimed a capability the runtime can't honor). Authoring it requires the reference schema in [manifest-reference/](manifest-reference/); the live schema rejects an `undo` property at the manifest root.
 
 ```json
 "undo": {
@@ -210,7 +214,9 @@ Wherever a string is executed, `{{params.<id>}}` substitutes the parameter value
 
 Currently nothing in the undo block has a runtime effect. Every executed action is effectively permanent until the undo engine ships.
 
-## Dry-run *(not implemented yet)*
+## Dry-run *(reference only)*
+
+Like `undo`, this block was stripped from the live schema for alpha. Live in [manifest-reference/](manifest-reference/) until the executor supports it.
 
 ```json
 "dryRun": {
@@ -224,7 +230,9 @@ Currently nothing in the undo block has a runtime effect. Every executed action 
 
 When wired, the Shell will render the resource string with the provided tokens; dry-run will **not** execute any operation.
 
-## Composing actions — sub-action steps *(not implemented yet)*
+## Composing actions — sub-action steps *(reference only)*
+
+Sub-action composition was stripped from the live schema for alpha. The runtime parser still recognises `kind: "sub-action"` steps (returns "not supported yet" at execute time), but the live schema's `step` definition only accepts operation steps. Authoring against the reference schema in [manifest-reference/](manifest-reference/) keeps you on the target shape.
 
 A step can invoke another action instead of performing an operation. Mix freely — a composite can have its own operation steps alongside sub-action steps.
 

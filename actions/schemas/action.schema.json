@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Hillpro/WinEvo/blob/main/actions/schemas/action.schema.json",
   "title": "WinEvo Action Manifest",
-  "description": "Declarative description of an optimizer/tweaker action executable by the WinEvo agent.",
+  "description": "Declarative description of an optimizer/tweaker action executable by the WinEvo agent. This is the alpha-trimmed schema — it covers only what the runtime actually consumes today. The long-term target shape (with undo, dryRun, preconditions, sub-actions, restore points, progress events, additional operations) is preserved in docs/manifest-reference/action.schema.json.",
   "type": "object",
   "required": ["id", "version", "name", "category", "execution"],
   "additionalProperties": false,
@@ -25,10 +25,7 @@
     "requirements": { "$ref": "#/$defs/requirements" },
     "warnings":     { "type": "array", "items": { "$ref": "#/$defs/warning" } },
     "parameters":   { "type": "array", "items": { "$ref": "#/$defs/parameter" } },
-    "preconditions":{ "type": "array", "items": { "$ref": "#/$defs/precondition" } },
     "execution":    { "$ref": "#/$defs/execution" },
-    "undo":         { "$ref": "#/$defs/undo" },
-    "dryRun":       { "$ref": "#/$defs/dryRun" },
     "localization": { "$ref": "#/$defs/localization" }
   },
 
@@ -65,12 +62,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "elevation":       { "type": "string", "enum": ["required", "not-required", "optional"], "default": "not-required" },
-        "packageIdentity": { "type": "string", "enum": ["required", "optional", "forbidden"],    "default": "optional" },
-        "minWindowsBuild": { "type": "integer", "minimum": 22000 },
-        "architectures":   { "type": "array", "items": { "type": "string", "enum": ["x64", "arm64"] }, "uniqueItems": true },
-        "minAgentVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-        "disabled":        { "type": "boolean", "default": false }
+        "elevation": { "type": "string", "enum": ["required", "not-required", "optional"], "default": "not-required" }
       }
     },
 
@@ -106,116 +98,28 @@
       ]
     },
 
-    "precondition": {
-      "type": "object",
-      "required": ["type"],
-      "properties": {
-        "type": { "type": "string", "enum": ["osBuildAtLeast", "serviceExists", "driveHasFreeSpace", "registryValueEquals", "fileExists", "commandAvailable"] }
-      },
-      "additionalProperties": true
-    },
-
     "execution": {
       "type": "object",
       "required": ["steps"],
       "additionalProperties": false,
       "properties": {
-        "mode":                { "type": "string", "enum": ["sequential", "sequential-continue-on-error"], "default": "sequential" },
-        "createRestorePoint":  { "type": "boolean", "default": false },
-        "steps":               { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } }
+        "mode":  { "type": "string", "enum": ["sequential", "sequential-continue-on-error"], "default": "sequential" },
+        "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } }
       }
     },
 
     "step": {
-      "description": "A step is either an operation (atomic action executed by the agent) or a sub-action (a reference to another action manifest).",
-      "oneOf": [
-        { "$ref": "#/$defs/operationStep" },
-        { "$ref": "#/$defs/subActionStep" }
-      ]
-    },
-
-    "operationStep": {
       "type": "object",
       "required": ["operation"],
+      "description": "A step that invokes an agent-side operation. Sub-action composition is target-only and lives in the reference snapshot.",
       "properties": {
         "kind":             { "const": "operation" },
         "id":               { "type": "string" },
-        "operation":        { "type": "string", "enum": ["external-process", "builtin-tool", "powershell", "command", "registry-set", "registry-delete", "registry-read", "service-stop", "service-start", "service-restart", "file-delete", "file-copy", "file-move", "process-kill", "delay", "sysinternals-tool", "system-restore-point"] },
-        "progress":         { "$ref": "#/$defs/progress" },
+        "operation":        { "type": "string", "enum": ["external-process", "builtin-tool", "powershell", "command", "registry-set", "registry-delete", "process-kill", "delay"] },
         "timeout":          { "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 1 }] },
-        "continueOnError":  { "type": "boolean", "default": false },
-        "condition":        { "$ref": "#/$defs/precondition" }
+        "continueOnError":  { "type": "boolean", "default": false }
       },
       "additionalProperties": true
-    },
-
-    "subActionStep": {
-      "type": "object",
-      "required": ["kind", "ref"],
-      "additionalProperties": false,
-      "properties": {
-        "kind":             { "const": "sub-action" },
-        "id":               { "type": "string" },
-        "ref":              { "type": "string", "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*$", "description": "Id of another action manifest to invoke." },
-        "minVersion":       { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "Minimum version of the referenced action required." },
-        "parameters":       { "$ref": "#/$defs/parameterBindings", "description": "Explicit mapping of the referenced action's parameter ids to values or template expressions." },
-        "continueOnError":  { "type": "boolean", "default": false },
-        "condition":        { "$ref": "#/$defs/precondition" }
-      }
-    },
-
-    "parameterBindings": {
-      "type": "object",
-      "description": "Explicit parameter mapping for sub-action steps. Keys are the referenced action's parameter ids; values are literals or template expressions like {{params.x}} or {{drive(params.target)}}.",
-      "additionalProperties": {
-        "oneOf": [
-          { "type": "string" },
-          { "type": "integer" },
-          { "type": "number" },
-          { "type": "boolean" }
-        ]
-      }
-    },
-
-    "progress": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "type":   { "type": "string", "enum": ["determinate", "indeterminate", "unknown"] },
-        "parser": { "type": "string", "enum": ["percent-line", "dism-stdout", "sfc-stdout"] }
-      }
-    },
-
-    "undo": {
-      "type": "object",
-      "required": ["supported"],
-      "description": "For composite actions, 'supported: true' is only valid when every reachable step (operations and sub-actions) is undoable. The loader validates this and reports the first non-undoable step as the blocker if the author claims full support incorrectly.",
-      "properties": {
-        "supported": { "type": "boolean" },
-        "strategy":  { "type": "string", "enum": ["automatic", "manual"] },
-        "steps":     { "type": "array", "items": { "$ref": "#/$defs/step" } },
-        "reason":    { "$ref": "#/$defs/localizedResourceRef" }
-      }
-    },
-
-    "dryRun": {
-      "type": "object",
-      "required": ["supported"],
-      "properties": {
-        "supported": { "type": "boolean" },
-        "preview":   { "$ref": "#/$defs/localizedResourceRef" }
-      }
-    },
-
-    "localizedResourceRef": {
-      "type": "object",
-      "description": "Reference to a translatable string in the shared resource bundles (Strings.<lang>.resx), for text reused across many manifests (e.g. generic warnings, undo-irreversible reasons). Use inline 'localization' for text unique to this manifest.",
-      "required": ["key"],
-      "additionalProperties": false,
-      "properties": {
-        "key":    { "type": "string" },
-        "tokens": { "type": "object", "additionalProperties": { "type": "string" } }
-      }
     }
   }
 }

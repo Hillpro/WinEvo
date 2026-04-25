@@ -3,9 +3,9 @@
 > **Implementation status (summary).**
 > - ✅ **Wired:** Shell (WinUI 3), Agent broker process, JSON-over-pipe IPC, handshake, lazy UAC promotion with Medium-IL pipe-label handling, 8 operations (`registry-set`, `registry-delete`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`), end-to-end execute flow, Job Object for child-process cleanup (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`), severity-adapted confirmation dialog for action warnings (info/warning/danger/critical with typed-phrase challenge), shared string bundles in `resources/Strings.{en,fr}.json` with `{token}` interpolation, deterministic agent teardown on window close.
 > - 🚧 **Partial:** manifest parse (lenient, no JSON Schema validation), footer running-count (observes the currently-selected Detail VM only — switching selection mid-execution drops the subscription).
-> - 🔲 **Not yet implemented:** Service mode, service install/uninstall, Tray ↔ Agent IPC, gRPC transport, streaming progress events, undo, dry-run, restore points, execution audit log, Authenticode client verification, code signing, Sysinternals tool resolver, remaining operations (`registry-read`, `service-*`, `file-*`, `sysinternals-tool`, `system-restore-point`), sub-action step execution, template functions (`drive()` / `basename()` / `dirname()`), type-specific parameter pickers in the UI.
+> - 🔲 **Not yet implemented:** Service mode, service install/uninstall, Tray ↔ Agent IPC, gRPC transport, streaming progress events, undo, dry-run, restore points, execution audit log, Authenticode client verification, code signing, Sysinternals tool resolver, roadmap operations (`registry-read`, `service-*`, `file-*`, `sysinternals-tool`, `system-restore-point`), sub-action step execution, template functions (`drive()` / `basename()` / `dirname()`), type-specific parameter pickers in the UI.
 >
-> The narrative below describes the **full architecture** (including unimplemented pieces). Companion docs mark target-vs-current per feature: [ipc-contract.md](ipc-contract.md), [action-authoring.md](action-authoring.md), [security-model.md](security-model.md).
+> **Live schema vs reference snapshot.** The live [actions/schemas/action.schema.json](../actions/schemas/action.schema.json) covers only what the runtime consumes today. The full target shape — undo, dryRun, preconditions, sub-actions, restore points, progress, OS/arch gates, the roadmap operations — is preserved in [docs/manifest-reference/](manifest-reference/). The narrative below describes the **full architecture** (including unimplemented pieces); when an alpha-only constraint matters, it's called out explicitly. Companion docs mark target-vs-current per feature: [ipc-contract.md](ipc-contract.md), [action-authoring.md](action-authoring.md), [security-model.md](security-model.md).
 
 ## Processes
 
@@ -53,7 +53,7 @@ gRPC contract is defined in [`WinEvo.Contracts/Protos/agent-service.proto`](../s
 
 ## Action model
 
-Actions are declarative JSON manifests composed from a closed set of **operations** (registry, external-process, service control, etc.) and/or **sub-action** references to other manifests. See [action-authoring.md](action-authoring.md) for the schema and examples.
+Actions are declarative JSON manifests composed from a closed set of **operations** (registry, external-process, service control, etc.). Composition via **sub-action** references is target-only — the runtime parses sub-action steps but execution returns "not supported", and the alpha schema doesn't list them at all (see [manifest-reference/](manifest-reference/)). See [action-authoring.md](action-authoring.md) for the schema and examples.
 
 Community extensibility lives at the **manifest** level — anyone can write a JSON action and drop it into `%LOCALAPPDATA%\WinEvo\Actions\`. Extending the operation set (adding fundamentally new trusted-code operations to the agent) requires a code-level PR and review; this is the security boundary.
 
@@ -70,11 +70,11 @@ The agent is **always** installed via MSI (never as part of the MSIX payload), b
 
 See [security-model.md](security-model.md) for the full treatment. In brief:
 
-- Elevation is opt-in per action. Non-elevated actions never touch the agent.
-- Every destructive operation supports **undo** with state backup in `%ProgramData%\WinEvo\UndoStore\`.
-- Restore points are opt-in per action manifest, not a default.
-- Dry-run preview is opt-in per action manifest.
-- All executions are logged to `%ProgramData%\WinEvo\Logs\executions.jsonl` for audit + undo discovery.
+- Elevation is opt-in per action. Non-elevated actions never touch the agent. ✅ wired.
+- *(target)* Every destructive operation supports **undo** with state backup in `%ProgramData%\WinEvo\UndoStore\`. The `undo` block was stripped from the live schema for alpha; manifests in [manifest-reference/](manifest-reference/) document the target shape.
+- *(target)* Restore points are opt-in per action manifest, not a default. (`execution.createRestorePoint` is reference-only.)
+- *(target)* Dry-run preview is opt-in per action manifest. (`dryRun` block reference-only.)
+- *(target)* All executions are logged to `%ProgramData%\WinEvo\Logs\executions.jsonl` for audit + undo discovery.
 
 ## Project layout
 

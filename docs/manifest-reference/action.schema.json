@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hillpro/WinEvo/blob/main/actions/schemas/action.schema.json",
+  "title": "WinEvo Action Manifest",
+  "description": "Declarative description of an optimizer/tweaker action executable by the WinEvo agent.",
+  "type": "object",
+  "required": ["id", "version", "name", "category", "execution"],
+  "additionalProperties": false,
+
+  "properties": {
+    "$schema":      { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*$",
+      "description": "Globally unique stable id. Format: <category>.<kebab-case-name>."
+    },
+    "version":      { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$" },
+    "name":         { "type": "string", "description": "Human-readable name in English (default). Translate via the 'localization' block." },
+    "description":  { "type": "string", "description": "One-sentence description in English (default). Translate via the 'localization' block." },
+    "category":     { "type": "string", "enum": ["customization", "resources", "storage", "updates", "third-party"] },
+    "tags":         { "type": "array", "items": { "type": "string" } },
+    "icon":         { "type": "string" },
+    "author":       { "type": "string" },
+
+    "requirements": { "$ref": "#/$defs/requirements" },
+    "warnings":     { "type": "array", "items": { "$ref": "#/$defs/warning" } },
+    "parameters":   { "type": "array", "items": { "$ref": "#/$defs/parameter" } },
+    "preconditions":{ "type": "array", "items": { "$ref": "#/$defs/precondition" } },
+    "execution":    { "$ref": "#/$defs/execution" },
+    "undo":         { "$ref": "#/$defs/undo" },
+    "dryRun":       { "$ref": "#/$defs/dryRun" },
+    "localization": { "$ref": "#/$defs/localization" }
+  },
+
+  "$defs": {
+
+    "localization": {
+      "type": "object",
+      "description": "Per-language overrides for the manifest's inline text. Keys are IETF language tags (e.g. 'fr', 'es'). Top-level fields on the manifest are the English (en) base; any field not overridden falls back to English.",
+      "additionalProperties": { "$ref": "#/$defs/localizationEntry" }
+    },
+
+    "localizationEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name":        { "type": "string" },
+        "description": { "type": "string" },
+        "parameters": {
+          "type": "object",
+          "description": "Per-parameter-id overrides. Keys must match a parameter id declared in the top-level 'parameters' array.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name":        { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "elevation":       { "type": "string", "enum": ["required", "not-required", "optional"], "default": "not-required" },
+        "packageIdentity": { "type": "string", "enum": ["required", "optional", "forbidden"],    "default": "optional" },
+        "minWindowsBuild": { "type": "integer", "minimum": 22000 },
+        "architectures":   { "type": "array", "items": { "type": "string", "enum": ["x64", "arm64"] }, "uniqueItems": true },
+        "minAgentVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "disabled":        { "type": "boolean", "default": false }
+      }
+    },
+
+    "warning": {
+      "type": "object",
+      "required": ["severity", "key"],
+      "additionalProperties": false,
+      "properties": {
+        "severity": { "type": "string", "enum": ["info", "warning", "danger", "critical"] },
+        "key":      { "type": "string" },
+        "tokens":   { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+
+    "parameter": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id":          { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$" },
+        "type":        { "type": "string", "enum": ["string", "integer", "boolean", "enum", "drive", "wifi-profile", "file-path", "directory-path", "service-name"] },
+        "name":        { "type": "string", "description": "English name of the parameter. Translate via 'localization.<lang>.parameters.<id>.name'." },
+        "description": { "type": "string", "description": "English description of the parameter. Translate via 'localization.<lang>.parameters.<id>.description'." },
+        "required":    { "type": "boolean", "default": false },
+        "default":     {}
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "integer" } } },
+          "then": { "properties": { "min": { "type": "integer" }, "max": { "type": "integer" } } } },
+        { "if": { "properties": { "type": { "const": "enum" } } },
+          "then": { "required": ["choices"], "properties": { "choices": { "type": "array", "items": { "type": "string" }, "minItems": 1 } } } },
+        { "if": { "properties": { "type": { "const": "drive" } } },
+          "then": { "properties": { "filter": { "type": "object", "properties": { "driveType": { "type": "array", "items": { "type": "string", "enum": ["fixed", "removable", "network", "cdrom", "ramdisk"] } } } } } } }
+      ]
+    },
+
+    "precondition": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["osBuildAtLeast", "serviceExists", "driveHasFreeSpace", "registryValueEquals", "fileExists", "commandAvailable"] }
+      },
+      "additionalProperties": true
+    },
+
+    "execution": {
+      "type": "object",
+      "required": ["steps"],
+      "additionalProperties": false,
+      "properties": {
+        "mode":                { "type": "string", "enum": ["sequential", "sequential-continue-on-error"], "default": "sequential" },
+        "createRestorePoint":  { "type": "boolean", "default": false },
+        "steps":               { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } }
+      }
+    },
+
+    "step": {
+      "description": "A step is either an operation (atomic action executed by the agent) or a sub-action (a reference to another action manifest).",
+      "oneOf": [
+        { "$ref": "#/$defs/operationStep" },
+        { "$ref": "#/$defs/subActionStep" }
+      ]
+    },
+
+    "operationStep": {
+      "type": "object",
+      "required": ["operation"],
+      "properties": {
+        "kind":             { "const": "operation" },
+        "id":               { "type": "string" },
+        "operation":        { "type": "string", "enum": ["external-process", "builtin-tool", "powershell", "command", "registry-set", "registry-delete", "registry-read", "service-stop", "service-start", "service-restart", "file-delete", "file-copy", "file-move", "process-kill", "delay", "sysinternals-tool", "system-restore-point"] },
+        "progress":         { "$ref": "#/$defs/progress" },
+        "timeout":          { "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 1 }] },
+        "continueOnError":  { "type": "boolean", "default": false },
+        "condition":        { "$ref": "#/$defs/precondition" }
+      },
+      "additionalProperties": true
+    },
+
+    "subActionStep": {
+      "type": "object",
+      "required": ["kind", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "kind":             { "const": "sub-action" },
+        "id":               { "type": "string" },
+        "ref":              { "type": "string", "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*$", "description": "Id of another action manifest to invoke." },
+        "minVersion":       { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "Minimum version of the referenced action required." },
+        "parameters":       { "$ref": "#/$defs/parameterBindings", "description": "Explicit mapping of the referenced action's parameter ids to values or template expressions." },
+        "continueOnError":  { "type": "boolean", "default": false },
+        "condition":        { "$ref": "#/$defs/precondition" }
+      }
+    },
+
+    "parameterBindings": {
+      "type": "object",
+      "description": "Explicit parameter mapping for sub-action steps. Keys are the referenced action's parameter ids; values are literals or template expressions like {{params.x}} or {{drive(params.target)}}.",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "integer" },
+          { "type": "number" },
+          { "type": "boolean" }
+        ]
+      }
+    },
+
+    "progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type":   { "type": "string", "enum": ["determinate", "indeterminate", "unknown"] },
+        "parser": { "type": "string", "enum": ["percent-line", "dism-stdout", "sfc-stdout"] }
+      }
+    },
+
+    "undo": {
+      "type": "object",
+      "required": ["supported"],
+      "description": "For composite actions, 'supported: true' is only valid when every reachable step (operations and sub-actions) is undoable. The loader validates this and reports the first non-undoable step as the blocker if the author claims full support incorrectly.",
+      "properties": {
+        "supported": { "type": "boolean" },
+        "strategy":  { "type": "string", "enum": ["automatic", "manual"] },
+        "steps":     { "type": "array", "items": { "$ref": "#/$defs/step" } },
+        "reason":    { "$ref": "#/$defs/localizedResourceRef" }
+      }
+    },
+
+    "dryRun": {
+      "type": "object",
+      "required": ["supported"],
+      "properties": {
+        "supported": { "type": "boolean" },
+        "preview":   { "$ref": "#/$defs/localizedResourceRef" }
+      }
+    },
+
+    "localizedResourceRef": {
+      "type": "object",
+      "description": "Reference to a translatable string in the shared resource bundles (Strings.<lang>.resx), for text reused across many manifests (e.g. generic warnings, undo-irreversible reasons). Use inline 'localization' for text unique to this manifest.",
+      "required": ["key"],
+      "additionalProperties": false,
+      "properties": {
+        "key":    { "type": "string" },
+        "tokens": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    }
+  }
+}

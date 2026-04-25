@@ -10,7 +10,10 @@
   "author": "Hillpro",
 
   "requirements": {
-    "elevation": "not-required"
+    "elevation": "not-required",
+    "packageIdentity": "optional",
+    "minWindowsBuild": 22000,
+    "architectures": ["x64", "arm64"]
   },
 
   "execution": {
@@ -22,7 +25,8 @@
         "key":  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
         "value": "BingSearchEnabled",
         "type": "DWORD",
-        "data": 0
+        "data": 0,
+        "backupForUndo": true
       },
       {
         "id": "disable-cortana-consent",
@@ -30,7 +34,8 @@
         "key":  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
         "value": "CortanaConsent",
         "type": "DWORD",
-        "data": 0
+        "data": 0,
+        "backupForUndo": true
       },
       {
         "id": "restart-searchui",
@@ -40,6 +45,13 @@
       }
     ]
   },
+
+  "undo": {
+    "supported": true,
+    "strategy": "automatic"
+  },
+
+  "dryRun": { "supported": false },
 
   "localization": {
     "fr": {

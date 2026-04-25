@@ -10,7 +10,10 @@
   "author": "Hillpro",
 
   "requirements": {
-    "elevation": "required"
+    "elevation": "required",
+    "packageIdentity": "optional",
+    "minWindowsBuild": 22000,
+    "architectures": ["x64", "arm64"]
   },
 
   "warnings": [
@@ -28,17 +31,36 @@
     }
   ],
 
+  "preconditions": [
+    { "type": "driveHasFreeSpace", "drive": "{{params.drive}}", "minMegabytes": 100 }
+  ],
+
   "execution": {
     "mode": "sequential",
+    "createRestorePoint": false,
     "steps": [
       {
         "id": "cipher-wipe",
         "operation": "external-process",
         "path": "%SystemRoot%\\System32\\cipher.exe",
         "args": ["/w:{{params.drive}}"],
-        "timeout": null
+        "timeout": null,
+        "progress": { "type": "indeterminate" }
       }
     ]
+  },
+
+  "undo": {
+    "supported": false,
+    "reason": { "key": "undo.irreversible" }
+  },
+
+  "dryRun": {
+    "supported": true,
+    "preview": {
+      "key": "dryrun.storage.wipe",
+      "tokens": { "drive": "{{params.drive}}" }
+    }
   },
 
   "localization": {

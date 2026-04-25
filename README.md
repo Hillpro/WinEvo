@@ -4,7 +4,7 @@ An open-source optimizer and tweaker for Windows 11, built as a WinUI 3 applicat
 
 ## Status
 
-🚧 **Pre-alpha.** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions with a severity-gated confirmation dialog. Eight operations are wired (`registry-set`, `registry-delete`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`); `registry-read`, `service-*`, `file-*`, `system-restore-point`, `sysinternals-tool` are still TODO. Spawned children are kept under a Windows Job Object so they die with the agent. IPC is length-prefixed JSON over a named pipe; gRPC (`.proto` already defined) is the target transport.
+🚧 **Pre-alpha.** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions with a severity-gated confirmation dialog. Eight operations are wired (`registry-set`, `registry-delete`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`); the live schema is trimmed to those. Roadmap operations (`registry-read`, `service-*`, `file-*`, `system-restore-point`, `sysinternals-tool`) and target manifest features (undo, dry-run, preconditions, sub-actions, restore points, progress streaming) are tracked in [docs/manifest-reference/](docs/manifest-reference/). Spawned children are kept under a Windows Job Object so they die with the agent. IPC is length-prefixed JSON over a named pipe; gRPC (`.proto` already defined) is the target transport.
 
 ## Goals
 
@@ -69,7 +69,7 @@ Agent diagnostic log: `%TEMP%\winevo-agent.log` (startup events, pipe-security o
 
 ## Contributing actions
 
-Drop a JSON manifest in the appropriate `actions/<category>/` folder. Schema at [actions/schemas/action.schema.json](actions/schemas/action.schema.json). Authoring guide: [docs/action-authoring.md](docs/action-authoring.md). New operation types require a code-level PR and review.
+Drop a JSON manifest in the appropriate `actions/<category>/` folder. Live (alpha-trimmed) schema at [actions/schemas/action.schema.json](actions/schemas/action.schema.json); the long-term target shape — including features the engine doesn't consume yet — lives at [docs/manifest-reference/](docs/manifest-reference/). Authoring guide: [docs/action-authoring.md](docs/action-authoring.md). New operation types require a code-level PR and review.
 
 ## License
 
