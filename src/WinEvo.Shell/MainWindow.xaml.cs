@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using WinEvo.Shell.Core.ViewModels;
+using WinEvo.Shell.Views;
 
 namespace WinEvo.Shell;
 
@@ -13,6 +14,12 @@ public sealed partial class MainWindow : Window
     }
 
     public MainViewModel ViewModel { get; }
+
+    private async void OnAboutClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AboutDialog { XamlRoot = Content.XamlRoot };
+        await dialog.ShowAsync();
+    }
 
     // --- x:Bind helpers for Visibility; kept instance methods so generated code can find them.
 

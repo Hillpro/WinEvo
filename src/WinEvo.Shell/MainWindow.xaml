@@ -14,9 +14,22 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Padding="16,12" Spacing="12">
-            <TextBlock Text="WinEvo" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
-        </StackPanel>
+        <Grid Grid.Row="0" Padding="16,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                       Text="WinEvo" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1"
+                    Click="OnAboutClick"
+                    ToolTipService.ToolTip="About WinEvo"
+                    Padding="8,4"
+                    Background="Transparent"
+                    BorderThickness="0">
+                <FontIcon Glyph="&#xE946;" FontSize="16" />
+            </Button>
+        </Grid>
 
         <!-- Body: master-detail -->
         <Grid Grid.Row="1">

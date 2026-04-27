@@ -53,7 +53,7 @@ public sealed class PipeAgentClient : IAgentClient
         {
             RequestId = Guid.NewGuid().ToString("N"),
             ClientKind = "shell",
-            ClientVersion = typeof(PipeAgentClient).Assembly.GetName().Version?.ToString() ?? "0.1.0",
+            ClientVersion = typeof(PipeAgentClient).Assembly.GetName().Version?.ToString() ?? "0.0.0",
         };
         var response = await SendAsync(request, ct).ConfigureAwait(false);
         return response switch

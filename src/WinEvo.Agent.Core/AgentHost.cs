@@ -109,7 +109,7 @@ public sealed class AgentHost
         HandshakeRequest hs => new HandshakeResponse
         {
             RequestId = hs.RequestId,
-            AgentVersion = typeof(AgentHost).Assembly.GetName().Version?.ToString() ?? "0.1.0",
+            AgentVersion = typeof(AgentHost).Assembly.GetName().Version?.ToString() ?? "0.0.0",
             AgentProtocolVersion = 1,
             SupportedOperations = _parser.SupportedIds.ToArray(),
         },

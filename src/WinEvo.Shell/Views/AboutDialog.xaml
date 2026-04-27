@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="WinEvo.Shell.Views.AboutDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="About WinEvo"
+    DefaultButton="Close"
+    CloseButtonText="Close">
+
+    <StackPanel Spacing="12" MinWidth="380" MaxWidth="440">
+
+        <StackPanel Spacing="2">
+            <TextBlock Text="WinEvo" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock x:Name="VersionText" Opacity="0.7" />
+            <TextBlock x:Name="CopyrightText" Opacity="0.6" FontSize="12" />
+        </StackPanel>
+
+        <TextBlock TextWrapping="Wrap" FontSize="13">
+            An open-source Windows 11 optimizer. Configures Windows through declarative JSON action manifests.
+        </TextBlock>
+
+        <StackPanel Spacing="2">
+            <TextBlock Text="License" FontWeight="SemiBold" FontSize="12" Opacity="0.7" />
+            <TextBlock TextWrapping="Wrap" FontSize="13">
+                Released under the GNU General Public License v3.0 or later.
+            </TextBlock>
+        </StackPanel>
+
+        <StackPanel Spacing="2">
+            <TextBlock Text="Privacy" FontWeight="SemiBold" FontSize="12" Opacity="0.7" />
+            <TextBlock TextWrapping="Wrap" FontSize="13">
+                Runs entirely on your computer. No telemetry, no accounts, no network calls.
+            </TextBlock>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="0" Margin="-12,0,0,0">
+            <HyperlinkButton x:Name="GitHubLink" Content="GitHub" />
+            <HyperlinkButton x:Name="PrivacyLink" Content="Privacy policy" />
+            <HyperlinkButton x:Name="LicenseLink" Content="License" />
+        </StackPanel>
+
+    </StackPanel>
+</ContentDialog>
