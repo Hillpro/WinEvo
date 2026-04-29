@@ -67,6 +67,50 @@ dotnet run --project src/WinEvo.Shell     # or F5 in Visual Studio
 
 Agent diagnostic log: `%TEMP%\winevo-agent.log` (startup events, pipe-security outcomes, unhandled exceptions — essential for elevated runs where the agent has no visible stdio).
 
+### Release publish
+
+```bash
+# MSIX (Store / sideload) — output: src/WinEvo.Shell/AppPackages/WinEvo.Shell_<ver>_x64*/*.msix
+dotnet publish src/WinEvo.Shell -c Release -r win-x64 \
+  -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true
+
+# Portable self-contained — bundles .NET + WinAppSDK runtimes (~140 MB).
+# Output: src/WinEvo.Shell/bin/Release/net10.0-windows10.0.22000.0/win-x64/publish/
+dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64
+```
+
+The portable command uses the `Portable-win-x64` publish profile in [src/WinEvo.Shell/Properties/PublishProfiles/](src/WinEvo.Shell/Properties/PublishProfiles/).
+
+MSIX is unsigned today; code-signing setup is still TODO. The portable output runs on a clean Windows 11 22000+ machine without any prerequisite installs.
+
+There is no release pipeline yet, so no public download. Producing a release `.zip` (publish + compress + SHA-256) is a manual step until CI/CD is wired up.
+
+## Portable distribution (end users)
+
+The portable zip is the no-install path: download, unzip, run. Recommended unzip location is somewhere under your user profile (e.g. `%LOCALAPPDATA%\WinEvo\`) so it doesn't need elevation to lay down. `Program Files` works too but requires admin to write.
+
+**SmartScreen.** The first launch will show *"Windows protected your PC"* because the alpha builds aren't code-signed yet. Click **More info → Run anyway**. This will go away once Microsoft Store distribution lands (Store-signed package) or once we obtain a code-signing cert for the portable.
+
+**Checksums.** Each release lists a SHA-256 next to the zip. Verify before running:
+
+```powershell
+Get-FileHash WinEvo-<version>-win-x64.zip -Algorithm SHA256
+```
+
+**What's inside.**
+
+```
+WinEvo/
+├── WinEvo.exe              # the UI; launch this
+├── agent/                  # privileged helper, spawned on demand
+│   └── WinEvo.Agent.exe
+├── actions/                # shipped JSON action manifests
+├── resources/              # i18n string bundles
+└── (.NET + WinAppSDK runtimes — bundled, no separate install needed)
+```
+
+**Uninstall.** Delete the `WinEvo/` folder. The Shell writes diagnostic logs to `%LOCALAPPDATA%\WinEvo\shell.log` and the agent writes to `%TEMP%\winevo-agent.log` — clear those manually if you want a fully clean removal.
+
 ## Contributing actions
 
 Drop a JSON manifest in the appropriate `actions/<category>/` folder. Live (alpha-trimmed) schema at [actions/schemas/action.schema.json](actions/schemas/action.schema.json); the long-term target shape — including features the engine doesn't consume yet — lives at [docs/manifest-reference/](docs/manifest-reference/). Authoring guide: [docs/action-authoring.md](docs/action-authoring.md). New operation types require a code-level PR and review.

@@ -8,13 +8,44 @@
     <!-- Output exe is WinEvo.exe (consumer-app naming); project folder stays WinEvo.Shell. -->
     <AssemblyName>WinEvo</AssemblyName>
     <UseWinUI>true</UseWinUI>
+
+    <!-- Single-project MSIX. Default WindowsPackageType=None preserves the
+         unpackaged dev experience (dotnet build, dotnet run, fast F5 unchanged).
+         MSIX and portable publish commands are documented in CLAUDE.md
+         "Build / test / run". -->
     <WindowsPackageType>None</WindowsPackageType>
+
+    <EnableMsixTooling>true</EnableMsixTooling>
+
+    <!-- Bundle the WinAppSDK runtime into the publish output when this is a
+         self-contained publish. Set inside the csproj (not on the CLI) so the
+         property does NOT propagate to ProjectReferences. Shell.Core also
+         references WinAppSDK, and propagating WindowsAppSDKSelfContained=true
+         to it makes both projects emit MsixContent, which collides at publish
+         (NETSDK1152). The portable command therefore only needs the
+         self contained flag; this property activates from there. -->
+    <WindowsAppSDKSelfContained Condition="'$(SelfContained)' == 'true'">true</WindowsAppSDKSelfContained>
+
+    <!-- TODO: configure signing (Store-assigned cert from Partner Center, or
+         a self-signed cert for sideload testing). Without this flag, MSIX
+         packaging fails because no PackageCertificateKeyFile is present. -->
+    <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
+
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- WinUI 3 patterns fight these two analyzers:
          CA1822: x:Bind binding helpers are instance methods by design.
          CA1001: Application cannot implement IDisposable; we dispose via Window.Closed. -->
     <NoWarn>$(NoWarn);CA1822;CA1001</NoWarn>
   </PropertyGroup>
+
+  <!-- MSIX-only items. The MSIX targets reject AppxManifest when
+       WindowsPackageType=None, so these are gated to packaging builds. -->
+  <ItemGroup Condition="'$(WindowsPackageType)' == 'MSIX'">
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+    <Content Include="Images\**\*.png" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
@@ -44,19 +75,61 @@
     </Content>
   </ItemGroup>
 
-  <!-- Copy WinEvo.Agent.exe (and its runtime files) into the Shell output directory
-       so AgentLauncher can spawn it as a sibling process. -->
-  <Target Name="CopyAgentBinaries" AfterTargets="Build">
+  <!-- Copy the Agent into an agent\ subfolder of the Shell's output, and
+       register the same files for MSIX packaging. -->
+  <PropertyGroup>
+    <_AgentBinBase>$(MSBuildProjectDirectory)\..\WinEvo.Agent\bin\$(Configuration)\net10.0-windows10.0.22000.0\</_AgentBinBase>
+  </PropertyGroup>
+
+
+  <!-- Post-build Copy → handles dotnet build and dotnet run. -->
+  <Target Name="CopyAgentBinaries" AfterTargets="Build" DependsOnTargets="ResolveProjectReferences">
     <PropertyGroup>
-      <AgentOutputDir>$(MSBuildProjectDirectory)\..\WinEvo.Agent\bin\$(Configuration)\net10.0-windows10.0.22000.0\</AgentOutputDir>
+      <AgentOutputDir Condition="'$(RuntimeIdentifier)' != '' And Exists('$(_AgentBinBase)$(RuntimeIdentifier)\')">$(_AgentBinBase)$(RuntimeIdentifier)\</AgentOutputDir>
+      <AgentOutputDir Condition="'$(AgentOutputDir)' == ''">$(_AgentBinBase)</AgentOutputDir>
     </PropertyGroup>
     <ItemGroup>
-      <AgentFiles Include="$(AgentOutputDir)**\*.*" />
+      <_AgentFiles Include="$(AgentOutputDir)**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(AgentFiles)"
-          DestinationFolder="$(OutputPath)%(RecursiveDir)"
+    <Copy SourceFiles="@(_AgentFiles)"
+          DestinationFiles="@(_AgentFiles->'$(OutputPath)agent\%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true"
           Condition="Exists('$(AgentOutputDir)')" />
+  </Target>
+
+  <!-- Post-publish Copy → handles unpackaged publish. -->
+  <Target Name="CopyAgentBinariesToPublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <AgentOutputDir Condition="'$(RuntimeIdentifier)' != '' And Exists('$(_AgentBinBase)$(RuntimeIdentifier)\')">$(_AgentBinBase)$(RuntimeIdentifier)\</AgentOutputDir>
+      <AgentOutputDir Condition="'$(AgentOutputDir)' == ''">$(_AgentBinBase)</AgentOutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_AgentPublishFiles Include="$(AgentOutputDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_AgentPublishFiles)"
+          DestinationFiles="@(_AgentPublishFiles->'$(PublishDir)agent\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(AgentOutputDir)') And '$(PublishDir)' != ''" />
+  </Target>
+
+  <!-- PackagingOutputs registration → handles MSIX. The MSIX packager
+         only scans @(PackagingOutputs); files dropped into bin/ post-build
+         are invisible to it. -->
+  <Target Name="IncludeAgentInMsix"
+          AfterTargets="GetPackagingOutputs"
+          Condition="'$(WindowsPackageType)' == 'MSIX'">
+    <PropertyGroup>
+      <AgentOutputDir Condition="'$(RuntimeIdentifier)' != '' And Exists('$(_AgentBinBase)$(RuntimeIdentifier)\')">$(_AgentBinBase)$(RuntimeIdentifier)\</AgentOutputDir>
+      <AgentOutputDir Condition="'$(AgentOutputDir)' == ''">$(_AgentBinBase)</AgentOutputDir>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(AgentOutputDir)')">
+      <_AgentMsixFiles Include="$(AgentOutputDir)**\*.*" />
+      <PackagingOutputs Include="@(_AgentMsixFiles)">
+        <TargetPath>agent\%(_AgentMsixFiles.RecursiveDir)%(_AgentMsixFiles.Filename)%(_AgentMsixFiles.Extension)</TargetPath>
+        <OutputGroup>BuiltProjectOutputGroup</OutputGroup>
+        <ProjectName>$(MSBuildProjectName)</ProjectName>
+      </PackagingOutputs>
+    </ItemGroup>
   </Target>
 
 </Project>

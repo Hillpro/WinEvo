@@ -208,5 +208,5 @@ public sealed class AgentLauncher : IAsyncDisposable
     /// Path to the agent executable as deployed next to the Shell.
     /// </summary>
     public static string ResolveDefaultAgentPath()
-        => Path.Combine(AppContext.BaseDirectory, "WinEvo.Agent.exe");
+        => Path.Combine(AppContext.BaseDirectory, "agent", "WinEvo.Agent.exe");
 }

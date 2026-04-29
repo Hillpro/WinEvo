@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WinEvo (Unpackaged)": {
+      "commandName": "Project"
+    },
+    "WinEvo (Package)": {
+      "commandName": "MsixPackage"
+    }
+  }
+}
