@@ -61,7 +61,7 @@ Community extensibility lives at the **manifest** level — anyone can write a J
 
 Two distribution channels, both driven by the same source tree (single-project MSIX in `WinEvo.Shell`):
 
-1. **MSIX (Store / sideload)** — self-contained MSIX containing `WinEvo.exe`, `agent/WinEvo.Agent.exe`, the bundled .NET + ASP.NET Core + WinAppSDK runtimes, action manifests, and resources. The Shell spawns the agent (unelevated by default, UAC-promoted on demand) using the `windows.fullTrustProcess` extension declared in `Package.appxmanifest`.
+1. **MSIX (Store / sideload)** — self-contained MSIX containing `WinEvo.exe`, `agent/WinEvo.Agent.exe`, the bundled .NET + WinAppSDK runtimes, action manifests, and resources. The Shell spawns the agent (unelevated by default, UAC-promoted on demand) using the `windows.fullTrustProcess` extension declared in `Package.appxmanifest`.
 2. **Unpackaged / portable** — self-contained zip with the same layout as the MSIX payload, minus the package manifest. Runs from any folder; agent is at `agent/WinEvo.Agent.exe` next to `WinEvo.exe`.
 
 Both channels embed the agent **inside** the package — there is no separate agent MSI. *(target)* The eventual service-mode install will need a separate installer (likely the `WinEvo.Installer.wixproj`) because Microsoft Store certification does not allow packaged apps to silently register privileged Windows Services. Service mode is not wired today; only the on-demand UAC-elevated broker is shipped.

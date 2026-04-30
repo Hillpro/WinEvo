@@ -109,7 +109,7 @@ WinEvo/
 │   └── WinEvo.Agent.exe
 ├── actions/                # shipped JSON action manifests
 ├── resources/              # i18n string bundles
-└── (.NET, ASP.NET Core, and WinAppSDK runtimes — bundled; no separate installs needed)
+└── (.NET and WinAppSDK runtimes — bundled; no separate installs needed)
 ```
 
 **Uninstall.** Delete the `WinEvo/` folder. The Shell writes diagnostic logs to `%LOCALAPPDATA%\WinEvo\shell.log` and the agent writes to `%TEMP%\winevo-agent.log` — clear those manually if you want a fully clean removal.

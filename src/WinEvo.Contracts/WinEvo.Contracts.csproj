@@ -5,14 +5,12 @@
     <RootNamespace>WinEvo.Contracts</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Google.Protobuf" />
-    <PackageReference Include="Grpc.Net.Client" />
-    <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Protobuf Include="Protos\agent-service.proto" GrpcServices="Both" />
-  </ItemGroup>
+  <!-- The .proto file under Protos\ is the contract document for a future
+       gRPC IPC swap. It is NOT codegened today: live IPC is JSON over a
+       named pipe, no gRPC at runtime. Re-enable codegen when wiring gRPC
+       by adding back PackageReferences to Grpc.Tools, Google.Protobuf, and
+       (depending on side) Grpc.AspNetCore / Grpc.Net.Client, plus a
+       <Protobuf Include="Protos\agent-service.proto" GrpcServices="Both" />
+       item. -->
 
 </Project>
