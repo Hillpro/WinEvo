@@ -78,19 +78,31 @@
     </Content>
   </ItemGroup>
 
-  <!-- Copy the Agent into an agent\ subfolder of the Shell's output, and
-       register the same files for MSIX packaging. -->
+  <!-- Bring the Agent into the Shell's output under an agent\ subfolder. The
+       three targets below cover every output path: bin\ (dotnet build / run),
+       publish\ (dotnet publish), and the .msix (MSIX packaging). The
+       subfolder layout dodges NETSDK1152 — the Agent and Shell.Core both
+       reference ActionModel / Ipc / Contracts, so a flat-merge collides on
+       every shared transitive dependency.
+
+       _AgentBinBase is the Agent project's base output dir without RID.
+       _ResolveAgentOutputDir resolves AgentOutputDir to either the
+       RID-specific subfolder (publish -r) or the RID-less fallback
+       (default build). DependsOnTargets="ResolveProjectReferences" makes
+       sure the Agent has actually built before we look for its files. -->
   <PropertyGroup>
     <_AgentBinBase>$(MSBuildProjectDirectory)\..\WinEvo.Agent\bin\$(Configuration)\net10.0-windows10.0.22000.0\</_AgentBinBase>
   </PropertyGroup>
 
-
-  <!-- Post-build Copy → handles dotnet build and dotnet run. -->
-  <Target Name="CopyAgentBinaries" AfterTargets="Build" DependsOnTargets="ResolveProjectReferences">
+  <Target Name="_ResolveAgentOutputDir" DependsOnTargets="ResolveProjectReferences">
     <PropertyGroup>
       <AgentOutputDir Condition="'$(RuntimeIdentifier)' != '' And Exists('$(_AgentBinBase)$(RuntimeIdentifier)\')">$(_AgentBinBase)$(RuntimeIdentifier)\</AgentOutputDir>
       <AgentOutputDir Condition="'$(AgentOutputDir)' == ''">$(_AgentBinBase)</AgentOutputDir>
     </PropertyGroup>
+  </Target>
+
+  <!-- Post-build Copy → handles dotnet build and dotnet run. -->
+  <Target Name="CopyAgentBinaries" AfterTargets="Build" DependsOnTargets="_ResolveAgentOutputDir">
     <ItemGroup>
       <_AgentFiles Include="$(AgentOutputDir)**\*.*" />
     </ItemGroup>
@@ -101,11 +113,7 @@
   </Target>
 
   <!-- Post-publish Copy → handles unpackaged publish. -->
-  <Target Name="CopyAgentBinariesToPublish" AfterTargets="Publish">
-    <PropertyGroup>
-      <AgentOutputDir Condition="'$(RuntimeIdentifier)' != '' And Exists('$(_AgentBinBase)$(RuntimeIdentifier)\')">$(_AgentBinBase)$(RuntimeIdentifier)\</AgentOutputDir>
-      <AgentOutputDir Condition="'$(AgentOutputDir)' == ''">$(_AgentBinBase)</AgentOutputDir>
-    </PropertyGroup>
+  <Target Name="CopyAgentBinariesToPublish" AfterTargets="Publish" DependsOnTargets="_ResolveAgentOutputDir">
     <ItemGroup>
       <_AgentPublishFiles Include="$(AgentOutputDir)**\*.*" />
     </ItemGroup>
@@ -115,16 +123,13 @@
           Condition="Exists('$(AgentOutputDir)') And '$(PublishDir)' != ''" />
   </Target>
 
-  <!-- PackagingOutputs registration → handles MSIX. The MSIX packager
-         only scans @(PackagingOutputs); files dropped into bin/ post-build
-         are invisible to it. -->
+  <!-- PackagingOutputs registration → handles MSIX. The MSIX packager only
+       scans @(PackagingOutputs); files dropped into bin\ post-build are
+       invisible to it. -->
   <Target Name="IncludeAgentInMsix"
           AfterTargets="GetPackagingOutputs"
+          DependsOnTargets="_ResolveAgentOutputDir"
           Condition="'$(WindowsPackageType)' == 'MSIX'">
-    <PropertyGroup>
-      <AgentOutputDir Condition="'$(RuntimeIdentifier)' != '' And Exists('$(_AgentBinBase)$(RuntimeIdentifier)\')">$(_AgentBinBase)$(RuntimeIdentifier)\</AgentOutputDir>
-      <AgentOutputDir Condition="'$(AgentOutputDir)' == ''">$(_AgentBinBase)</AgentOutputDir>
-    </PropertyGroup>
     <ItemGroup Condition="Exists('$(AgentOutputDir)')">
       <_AgentMsixFiles Include="$(AgentOutputDir)**\*.*" />
       <PackagingOutputs Include="@(_AgentMsixFiles)">

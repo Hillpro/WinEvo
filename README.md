@@ -70,11 +70,14 @@ Agent diagnostic log: `%TEMP%\winevo-agent.log` (startup events, pipe-security o
 ### Release publish
 
 ```bash
-# MSIX (Store / sideload) — output: src/WinEvo.Shell/AppPackages/WinEvo.Shell_<ver>_x64*/*.msix
-dotnet publish src/WinEvo.Shell -c Release -r win-x64 \
+# Self-contained: bundles .NET + WinAppSDK runtimes (~140 MB)
+
+# MSIX (Store / sideload)
+# Output: src/WinEvo.Shell/AppPackages/WinEvo.Shell_<ver>_x64*/*.msix
+dotnet publish src/WinEvo.Shell -c Release -r win-x64 --self-contained true \
   -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true
 
-# Portable self-contained — bundles .NET + WinAppSDK runtimes (~140 MB).
+# Portable (Unpackaged)
 # Output: src/WinEvo.Shell/bin/Release/net10.0-windows10.0.22000.0/win-x64/publish/
 dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64
 ```
@@ -106,7 +109,7 @@ WinEvo/
 │   └── WinEvo.Agent.exe
 ├── actions/                # shipped JSON action manifests
 ├── resources/              # i18n string bundles
-└── (.NET + WinAppSDK runtimes — bundled, no separate install needed)
+└── (.NET, ASP.NET Core, and WinAppSDK runtimes — bundled; no separate installs needed)
 ```
 
 **Uninstall.** Delete the `WinEvo/` folder. The Shell writes diagnostic logs to `%LOCALAPPDATA%\WinEvo\shell.log` and the agent writes to `%TEMP%\winevo-agent.log` — clear those manually if you want a fully clean removal.
