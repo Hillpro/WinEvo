@@ -9,26 +9,29 @@
     <AssemblyName>WinEvo</AssemblyName>
     <UseWinUI>true</UseWinUI>
 
-    <!-- Single-project MSIX. Default WindowsPackageType=None preserves the
-         unpackaged dev experience (dotnet build, dotnet run, fast F5 unchanged).
-         MSIX and portable publish commands are documented in CLAUDE.md
-         "Build / test / run". -->
+    <!-- Single-project MSIX. WindowsPackageType=None means default builds
+         produce the unpackaged exe; MSIX is opt-in via -p overrides at
+         publish time. Keeps `dotnet build` and `dotnet run` working as a
+         normal WinUI 3 unpackaged app. -->
     <WindowsPackageType>None</WindowsPackageType>
 
     <EnableMsixTooling>true</EnableMsixTooling>
 
-    <!-- Bundle the WinAppSDK runtime into the publish output when this is a
-         self-contained publish. Set inside the csproj (not on the CLI) so the
-         property does NOT propagate to ProjectReferences. Shell.Core also
-         references WinAppSDK, and propagating WindowsAppSDKSelfContained=true
-         to it makes both projects emit MsixContent, which collides at publish
-         (NETSDK1152). The portable command therefore only needs the
-         self contained flag; this property activates from there. -->
+    <!-- Bundle the WinAppSDK runtime when SelfContained=true. Set inside
+         the csproj (not on the CLI) so the property does NOT propagate to
+         ProjectReferences. Shell.Core also references WinAppSDK, and
+         propagating WindowsAppSDKSelfContained=true to it makes both
+         projects emit MsixContent, which then collides at publish with
+         NETSDK1152 (duplicate WinAppSDK runtime files). -->
     <WindowsAppSDKSelfContained Condition="'$(SelfContained)' == 'true'">true</WindowsAppSDKSelfContained>
 
-    <!-- TODO: configure signing (Store-assigned cert from Partner Center, or
-         a self-signed cert for sideload testing). Without this flag, MSIX
-         packaging fails because no PackageCertificateKeyFile is present. -->
+    <!-- MSIX signing is opt-in via WinEvo.Shell.csproj.user, which is
+         gitignored and per-developer. That sidecar sets
+         AppxPackageSigningEnabled=True + PackageCertificateThumbprint
+         pointing at a self-signed cert in CurrentUser\My. Without it,
+         MSIX packaging produces an unsigned package (WACK rejects, but
+         manifest validation still runs — useful for CI and clean clones).
+         See docs/sideload-msix.md for the per-machine setup. -->
     <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
 
     <ApplicationManifest>app.manifest</ApplicationManifest>

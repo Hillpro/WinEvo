@@ -89,7 +89,7 @@ There is no release pipeline yet, so no public download. Producing a release `.z
 
 The portable zip is the no-install path: download, unzip, run. Recommended unzip location is somewhere under your user profile (e.g. `%LOCALAPPDATA%\WinEvo\`) so it doesn't need elevation to lay down. `Program Files` works too but requires admin to write.
 
-**SmartScreen.** The first launch will show *"Windows protected your PC"* because the alpha builds aren't code-signed yet. Click **More info → Run anyway**. This will go away once Microsoft Store distribution lands (Store-signed package) or once we obtain a code-signing cert for the portable.
+**SmartScreen.** The first launch will show *"Windows protected your PC"* because the build is not code-signed by a recognized CA. Click **More info → Run anyway**. The prompt goes away once distribution moves to a Store-signed package or a CA-issued code-signing cert.
 
 **Checksums.** Each release lists a SHA-256 next to the zip. Verify before running:
 

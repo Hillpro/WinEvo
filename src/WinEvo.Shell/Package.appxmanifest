@@ -6,8 +6,10 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap rescap desktop">
 
-  <!-- TODO: replace Publisher with the Store-assigned CN once the app is
-       reserved on Partner Center. Name follows Microsoft's recommended
+  <!-- Publisher must match the Subject of the cert used to sign the MSIX,
+       exactly. Today this is a self-signed dev cert (CN=Hillpro); when a
+       CA-issued or Store-signed cert lands, both this Publisher and the
+       cert Subject must change in lockstep. Name follows the
        Publisher.AppName convention. -->
   <Identity
     Name="Hillpro.WinEvo"
