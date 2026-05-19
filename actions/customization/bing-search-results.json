@@ -1,0 +1,73 @@
+{
+  "$schema": "../schemas/action.schema.json",
+  "id": "customization.bing-search-results",
+  "version": "1.0.0",
+  "name": "Bing search results in Windows search",
+  "description": "Toggles whether Bing web results appear in the Start and Search experience for the current user.",
+  "category": "customization",
+  "tags": ["privacy", "search", "start-menu"],
+  "icon": "search-off",
+  "author": "Hillpro",
+
+  "requirements": {
+    "elevation": "not-required"
+  },
+
+  "interaction": "toggle",
+
+  "parameters": [
+    {
+      "id": "bingSearchEnabled",
+      "type": "boolean",
+      "name": "Show Bing results",
+      "description": "When on, Windows search includes Bing web results. When off, only local results are shown.",
+      "default": true,
+      "state": {
+        "key": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+        "value": "BingSearchEnabled",
+        "type": "DWORD"
+      }
+    }
+  ],
+
+  "execution": {
+    "mode": "sequential",
+    "steps": [
+      {
+        "id": "set-bing",
+        "operation": "registry-set",
+        "key":  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+        "value": "BingSearchEnabled",
+        "type": "DWORD",
+        "data": "{{params.bingSearchEnabled}}"
+      },
+      {
+        "id": "set-cortana-consent",
+        "operation": "registry-set",
+        "key":  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+        "value": "CortanaConsent",
+        "type": "DWORD",
+        "data": "{{params.bingSearchEnabled}}"
+      },
+      {
+        "id": "restart-searchui",
+        "operation": "process-kill",
+        "name": "SearchUI",
+        "continueOnError": true
+      }
+    ]
+  },
+
+  "localization": {
+    "fr": {
+      "name": "Résultats Bing dans la recherche Windows",
+      "description": "Active ou désactive l'affichage des résultats web Bing dans le menu Démarrer et la Recherche pour l'utilisateur courant.",
+      "parameters": {
+        "bingSearchEnabled": {
+          "name": "Afficher les résultats Bing",
+          "description": "Activé : la recherche Windows inclut les résultats web Bing. Désactivé : seuls les résultats locaux sont affichés."
+        }
+      }
+    }
+  }
+}

@@ -66,6 +66,8 @@ public sealed partial class MainViewModel : ObservableObject
         // execution state without any extra binding.
         if (oldValue is not null) oldValue.PropertyChanged -= OnDetailPropertyChanged;
         if (newValue is not null) newValue.PropertyChanged += OnDetailPropertyChanged;
+
+        oldValue?.Dispose();
         RefreshAgentStatus();
     }
 

@@ -107,15 +107,33 @@ public sealed class RegistrySetOperation : ActionOperation
     private static int ReadInt32(JsonElement data, IReadOnlyDictionary<string, object?> parameters) => data.ValueKind switch
     {
         JsonValueKind.Number => data.GetInt32(),
-        JsonValueKind.String => int.Parse(Templating.Render(data.GetString()!, parameters), System.Globalization.CultureInfo.InvariantCulture),
-        _ => throw new InvalidOperationException("DWORD data must be number or templated string"),
+        JsonValueKind.True => 1,
+        JsonValueKind.False => 0,
+        JsonValueKind.String => ParseInt32(Templating.Render(data.GetString()!, parameters)),
+        _ => throw new InvalidOperationException("DWORD data must be number, boolean or templated string"),
+    };
+
+    private static int ParseInt32(string rendered) => rendered switch
+    {
+        "true" => 1,
+        "false" => 0,
+        _ => int.Parse(rendered, System.Globalization.CultureInfo.InvariantCulture),
     };
 
     private static long ReadInt64(JsonElement data, IReadOnlyDictionary<string, object?> parameters) => data.ValueKind switch
     {
         JsonValueKind.Number => data.GetInt64(),
-        JsonValueKind.String => long.Parse(Templating.Render(data.GetString()!, parameters), System.Globalization.CultureInfo.InvariantCulture),
-        _ => throw new InvalidOperationException("QWORD data must be number or templated string"),
+        JsonValueKind.True => 1,
+        JsonValueKind.False => 0,
+        JsonValueKind.String => ParseInt64(Templating.Render(data.GetString()!, parameters)),
+        _ => throw new InvalidOperationException("QWORD data must be number, boolean or templated string"),
+    };
+
+    private static long ParseInt64(string rendered) => rendered switch
+    {
+        "true" => 1,
+        "false" => 0,
+        _ => long.Parse(rendered, System.Globalization.CultureInfo.InvariantCulture),
     };
 
     private static string ReadString(JsonElement data, IReadOnlyDictionary<string, object?> parameters)

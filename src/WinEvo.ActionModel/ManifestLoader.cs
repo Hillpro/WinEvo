@@ -16,6 +16,16 @@ public static class ManifestLoader
         CommentHandling = JsonCommentHandling.Skip,
     };
 
+    // The default trueWhen value for a parameter's state probe. Parsed once
+    // and reused — manifests that omit trueWhen all share this element.
+    private static readonly JsonElement s_defaultTrueWhen = ParseDefaultTrueWhen();
+
+    private static JsonElement ParseDefaultTrueWhen()
+    {
+        using var doc = JsonDocument.Parse("1");
+        return doc.RootElement.Clone();
+    }
+
     /// <summary>Loads and parses a manifest from a JSON file on disk.</summary>
     public static async Task<ActionManifest> LoadAsync(string path, CancellationToken ct = default)
     {
@@ -61,9 +71,37 @@ public static class ManifestLoader
             Parameters = ParseParameters(root),
             Execution = ParseExecution(root),
             Localization = ParseLocalization(root),
+            Interaction = ParseInteraction(root),
             RawJson = root.GetRawText(),
         };
         return manifest;
+    }
+
+    private static InteractionMode ParseInteraction(JsonElement root)
+        => OptionalString(root, "interaction") switch
+        {
+            "toggle" => InteractionMode.Toggle,
+            _ => InteractionMode.Button,
+        };
+
+    private static ParameterStateProbe? ParseState(JsonElement parameter)
+    {
+        if (!parameter.TryGetProperty("state", out var state) || state.ValueKind != JsonValueKind.Object)
+            return null;
+
+        // trueWhen defaults to JSON number 1 — matches the "enabled = 1"
+        // convention used by most Windows registry toggles.
+        var trueWhen = state.TryGetProperty("trueWhen", out var tw)
+            ? tw.Clone()
+            : s_defaultTrueWhen;
+
+        return new ParameterStateProbe
+        {
+            Key = RequireString(state, "key"),
+            Value = RequireString(state, "value"),
+            Type = RequireString(state, "type"),
+            TrueWhen = trueWhen,
+        };
     }
 
     private static Requirements ParseRequirements(JsonElement root)
@@ -79,8 +117,6 @@ public static class ManifestLoader
                 "optional" => ElevationRequirement.Optional,
                 _ => ElevationRequirement.NotRequired,
             },
-            MinWindowsBuild = req.TryGetProperty("minWindowsBuild", out var b) ? b.GetInt32() : 0,
-            Architectures = ParseStringArray(req, "architectures"),
         };
     }
 
@@ -136,32 +172,33 @@ public static class ManifestLoader
         var description = OptionalString(el, "description");
         var required = el.TryGetProperty("required", out var r) && r.ValueKind == JsonValueKind.True;
         JsonElement? @default = el.TryGetProperty("default", out var d) ? d.Clone() : null;
+        var state = ParseState(el);
 
         return type switch
         {
             "integer" => new IntegerParameter
             {
-                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default, State = state,
                 Min = el.TryGetProperty("min", out var mn) && mn.ValueKind == JsonValueKind.Number ? mn.GetInt32() : null,
                 Max = el.TryGetProperty("max", out var mx) && mx.ValueKind == JsonValueKind.Number ? mx.GetInt32() : null,
             },
             "boolean" => new BooleanParameter
             {
-                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default, State = state,
             },
             "enum" => new EnumParameter
             {
-                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default, State = state,
                 Choices = ParseStringArray(el, "choices"),
             },
             "drive" => new DriveParameter
             {
-                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default, State = state,
                 AllowedDriveTypes = ParseAllowedDriveTypes(el),
             },
             _ => new StringParameter
             {
-                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default,
+                Id = id, Type = type, Name = name, Description = description, Required = required, Default = @default, State = state,
             },
         };
     }

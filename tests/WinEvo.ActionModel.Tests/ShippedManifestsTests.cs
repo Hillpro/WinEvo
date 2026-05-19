@@ -24,15 +24,25 @@ public class ShippedManifestsTests
     }
 
     [Fact]
-    public async Task Disable_bing_has_no_parameters()
+    public async Task Bing_search_results_is_a_toggle_action_with_a_per_parameter_state_probe()
     {
         var manifest = await ManifestLoader.LoadAsync(
-            ResolvePath("customization/disable-bing-in-search.json"),
+            ResolvePath("customization/bing-search-results.json"),
             TestContext.Current.CancellationToken);
 
-        Assert.Empty(manifest.Parameters);
+        Assert.Equal(InteractionMode.Toggle, manifest.Interaction);
         Assert.Equal(ElevationRequirement.NotRequired, manifest.Requirements.Elevation);
         Assert.Equal(3, manifest.Execution.Steps.Count);
+
+        var p = Assert.IsType<BooleanParameter>(Assert.Single(manifest.Parameters));
+        Assert.Equal("bingSearchEnabled", p.Id);
+        Assert.True(p.Default!.Value.GetBoolean());
+
+        var state = Assert.IsType<ParameterStateProbe>(p.State);
+        Assert.Equal("HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search", state.Key);
+        Assert.Equal("BingSearchEnabled", state.Value);
+        Assert.Equal("DWORD", state.Type);
+        Assert.Equal(1, state.TrueWhen.GetInt32()); // defaulted by the loader
     }
 
     private static string ResolvePath(string relative)

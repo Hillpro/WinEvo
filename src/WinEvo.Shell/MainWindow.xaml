@@ -90,25 +90,13 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <!-- Parameters -->
-                        <StackPanel Spacing="8"
-                                    Visibility="{x:Bind ParametersVisibility(ViewModel.Detail), Mode=OneWay}">
-                            <TextBlock Text="Parameters" FontWeight="SemiBold" />
-                            <ItemsControl
-                                ItemsSource="{x:Bind ViewModel.Detail.Parameters, Mode=OneWay}"
-                                ItemTemplateSelector="{StaticResource ParameterInputTemplateSelector}" />
-                        </StackPanel>
-
-                        <!-- Execute -->
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <Button
-                                Content="Execute"
-                                Command="{x:Bind ViewModel.Detail.ExecuteCommand, Mode=OneWay}"
-                                Style="{ThemeResource AccentButtonStyle}" />
-                            <ProgressRing
-                                IsActive="{x:Bind ViewModel.Detail.IsRunning, Mode=OneWay, FallbackValue=False}"
-                                Width="24" Height="24" />
-                        </StackPanel>
+                        <!-- Interaction surface (button / toggle / future modes).
+                             The template selector picks the per-mode DataTemplate
+                             based on the runtime type of Detail.Interaction. -->
+                        <ContentControl
+                            Content="{x:Bind ViewModel.Detail.Interaction, Mode=OneWay}"
+                            ContentTemplateSelector="{StaticResource InteractionTemplateSelector}"
+                            HorizontalContentAlignment="Stretch" />
 
                         <!-- Status + result -->
                         <StackPanel Spacing="4">

@@ -57,7 +57,8 @@ public partial class App : Application
         // construction time
         var confirmation = new ConfirmationDialogService(() => _window?.Content.XamlRoot);
 
-        var parameterFactory = new ParameterInputFactory(new SystemDriveProvider());
+        var stateLoader = new AgentParameterStateLoader(_agentLauncher);
+        var parameterFactory = new ParameterInputFactory(new SystemDriveProvider(), stateLoader, dispatcherQueue);
 
         // TODO: detect system language / user preference instead of hard-coding English.
         var viewModel = new MainViewModel(
@@ -104,6 +105,9 @@ public partial class App : Application
 
         try
         {
+            // Dispose the current Detail VM first so its in-flight state
+            // probes are cancelled before the agent pipe is torn down.
+            _window?.ViewModel.Detail?.Dispose();
             if (_agentLauncher is not null)
             {
                 await _agentLauncher.DisposeAsync();

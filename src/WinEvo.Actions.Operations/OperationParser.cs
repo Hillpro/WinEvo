@@ -16,13 +16,14 @@ public sealed class OperationParser : IOperationParser
     {
         ["registry-set"]     = RegistrySetOperation.FromJson,
         ["registry-delete"]  = RegistryDeleteOperation.FromJson,
+        ["registry-read"]    = RegistryReadOperation.FromJson,
         ["process-kill"]     = ProcessKillOperation.FromJson,
         ["external-process"] = ExternalProcessOperation.FromJson,
         ["builtin-tool"]     = BuiltinToolOperation.FromJson,
         ["powershell"]       = PowerShellOperation.FromJson,
         ["command"]          = CommandOperation.FromJson,
         ["delay"]            = DelayOperation.FromJson,
-        // TODO: registry-read, service-stop, service-start, service-restart,
+        // TODO: service-stop, service-start, service-restart,
         //       file-delete, file-copy, file-move, sysinternals-tool,
         //       system-restore-point.
     };

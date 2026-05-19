@@ -5,16 +5,19 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
 using WinEvo.ActionModel;
 using WinEvo.Shell.Core.Services;
+using WinEvo.Shell.Core.ViewModels.Interactions;
 
 namespace WinEvo.Shell.Core.ViewModels;
 
 /// <summary>
-/// Right-pane VM: shows the selected action, hosts parameter inputs, and exposes
-/// the <see cref="ExecuteCommand"/>. Ensures the agent is elevated when the
-/// action declares <c>elevation: required</c>. Displays step-result summary
-/// inline. TODO: streaming progress events from the agent.
+/// Right-pane VM: shows the selected action, hosts parameter inputs, exposes
+/// the <see cref="ExecuteCommand"/>, and surfaces an <see cref="Interaction"/>
+/// controller that owns mode-specific UI glue (button vs toggle today; future
+/// modes plug in here). Ensures the agent is elevated when the action declares
+/// <c>elevation: required</c>. Displays step-result summary inline.
+/// TODO: streaming progress events from the agent.
 /// </summary>
-public sealed partial class ActionDetailViewModel : ObservableObject
+public sealed partial class ActionDetailViewModel : ObservableObject, IDisposable
 {
     private readonly AgentLauncher _agentLauncher;
     private readonly DispatcherQueue _dispatcher;
@@ -39,12 +42,23 @@ public sealed partial class ActionDetailViewModel : ObservableObject
 
         foreach (var p in item.Manifest.Parameters)
             Parameters.Add(parameterFactory.Create(p, language));
+
+        Interaction = item.Manifest.Interaction switch
+        {
+            InteractionMode.Toggle => new ToggleInteractionController(this),
+            _ => new ButtonInteractionController(this),
+        };
     }
 
     public ActionItemViewModel Item { get; }
     public string? Language { get; }
 
     public ObservableCollection<ParameterInputViewModel> Parameters { get; } = new();
+
+    public bool HasParameters => Parameters.Count > 0;
+
+    /// <summary>Per-mode UI glue (button, toggle, …). XAML selects a template by this object's runtime type.</summary>
+    public InteractionController Interaction { get; }
 
     [ObservableProperty]
     public partial bool IsRunning { get; set; }
@@ -166,4 +180,16 @@ public sealed partial class ActionDetailViewModel : ObservableObject
 
     private bool CanExecute() => !IsRunning;
 
+    /// <summary>
+    /// Releases the interaction controller and any parameter VMs that hold
+    /// disposable resources (e.g. a <see cref="BooleanParameterInputViewModel"/>
+    /// with an in-flight state probe). Called by <see cref="MainViewModel"/>
+    /// when the user picks a different action, and at window close.
+    /// </summary>
+    public void Dispose()
+    {
+        (Interaction as IDisposable)?.Dispose();
+        foreach (var p in Parameters)
+            (p as IDisposable)?.Dispose();
+    }
 }

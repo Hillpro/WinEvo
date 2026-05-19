@@ -11,7 +11,7 @@ WinEvo is a local-first Windows utility. This document describes what it does an
 ## What WinEvo does locally
 
 - **Action manifests.** WinEvo reads JSON action manifests bundled with the app. It also discovers community-contributed manifests under `%LOCALAPPDATA%\WinEvo\Actions\`. Manifests are read from disk and never uploaded.
-- **Action execution.** When you run an action, the agent executes the operations declared in its manifest — for example, setting a registry value, killing a process, or running a built-in Windows tool such as `cipher.exe`. The actions shipped with WinEvo (`disable-bing-in-search` and `wipe-free-space`) do not perform any network activity. A community manifest can in principle invoke a process that does — review a manifest before running it.
+- **Action execution.** When you run an action, the agent executes the operations declared in its manifest — for example, setting a registry value, killing a process, or running a built-in Windows tool such as `cipher.exe`. The actions shipped with WinEvo (`bing-search-results` and `wipe-free-space`) do not perform any network activity. A community manifest can in principle invoke a process that does — review a manifest before running it.
 - **Local diagnostic logs.** WinEvo writes diagnostic logs to two locations on your machine. These files stay on disk and are only useful if you choose to attach them to a bug report:
   - Agent log: `%TEMP%\winevo-agent.log`
   - Shell log: `%LOCALAPPDATA%\WinEvo\shell.log`

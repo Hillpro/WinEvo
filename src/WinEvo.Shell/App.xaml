@@ -16,6 +16,12 @@
                      in the Shell. Adding a new parameter type touches only
                      ParameterInputResources.xaml, not the consumers. -->
                 <ResourceDictionary Source="ms-appx:///Resources/ParameterInputResources.xaml" />
+
+                <!-- Interaction-mode templates (button / toggle / future). Selected
+                     by InteractionTemplateSelector keyed off the controller type.
+                     Adding a new mode touches only this dictionary, the selector,
+                     and the controller-construction switch in ActionDetailViewModel. -->
+                <ResourceDictionary Source="ms-appx:///Resources/InteractionTemplates.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

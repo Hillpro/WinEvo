@@ -25,6 +25,12 @@ public sealed class ActionManifest
     public LocalizationMap Localization { get; init; } = [];
 
     /// <summary>
+    /// How the action surfaces in the UI. <see cref="InteractionMode.Button"/>
+    /// is the default and matches the original Execute-button flow.
+    /// </summary>
+    public InteractionMode Interaction { get; init; } = InteractionMode.Button;
+
+    /// <summary>
     /// Authoritative JSON source of the manifest, preserved at parse time so
     /// the Shell can forward it to the agent verbatim.
     /// </summary>
@@ -58,8 +64,6 @@ public sealed class ActionManifest
 public sealed class Requirements
 {
     public ElevationRequirement Elevation { get; init; } = ElevationRequirement.NotRequired;
-    public int MinWindowsBuild { get; init; }
-    public IReadOnlyList<string> Architectures { get; init; } = [];
 }
 
 public enum ElevationRequirement { NotRequired, Optional, Required }
@@ -88,6 +92,14 @@ public abstract class Parameter
     public string? Description { get; init; }
     public bool Required { get; init; }
     public JsonElement? Default { get; init; }
+
+    /// <summary>
+    /// Optional probe that seeds this parameter's initial value from live
+    /// system state. When the read succeeds, it overrides
+    /// <see cref="Default"/>. When the read fails or the value is absent,
+    /// <see cref="Default"/> remains the seed.
+    /// </summary>
+    public ParameterStateProbe? State { get; init; }
 }
 
 /// <summary>
@@ -182,6 +194,42 @@ public sealed class SubActionStep : ActionStep
 
 public sealed class LocalizationMap : Dictionary<string, LocalizationEntry>
 {
+}
+
+/// <summary>How an action surfaces in the UI.</summary>
+public enum InteractionMode
+{
+    /// <summary>Classic one-shot action: parameter panel + Execute button.</summary>
+    Button,
+
+    /// <summary>Stateful on/off switch: a single ToggleSwitch that fires on flip.</summary>
+    Toggle,
+}
+
+/// <summary>
+/// Declares how the Shell reads the live system value that seeds a parameter's
+/// initial value.
+/// </summary>
+public sealed class ParameterStateProbe
+{
+    /// <summary>Full registry path (hive + subkey), same shape as <c>registry-set</c>'s <c>key</c>.</summary>
+    public required string Key { get; init; }
+
+    /// <summary>Name of the value to read.</summary>
+    public required string Value { get; init; }
+
+    /// <summary>Registry value kind (<c>DWORD</c>, <c>QWORD</c>, <c>STRING</c>, …). Used to validate the read result.</summary>
+    public required string Type { get; init; }
+
+    /// <summary>
+    /// For boolean parameters: the registry data value that maps to
+    /// <c>true</c>; any other present value maps to <c>false</c>. Defaults to
+    /// a JSON number <c>1</c> when the manifest omits it — matches the common
+    /// "enabled = 1" Windows convention. Manifests with inverse semantics
+    /// (e.g. <c>DisableXyz = 1</c> meaning the feature is off) should set
+    /// <c>trueWhen: 0</c>.
+    /// </summary>
+    public required JsonElement TrueWhen { get; init; }
 }
 
 public sealed class LocalizationEntry

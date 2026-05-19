@@ -32,9 +32,6 @@ public sealed partial class MainWindow : Window
     public Visibility ElevationVisibility(ActionDetailViewModel? detail)
         => detail?.Item.RequiresElevation == true ? Visibility.Visible : Visibility.Collapsed;
 
-    public Visibility ParametersVisibility(ActionDetailViewModel? detail)
-        => detail?.Parameters.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-
     public Visibility ResultDetailVisibility(ActionDetailViewModel? detail)
         => string.IsNullOrEmpty(detail?.ResultDetail) ? Visibility.Collapsed : Visibility.Visible;
 }

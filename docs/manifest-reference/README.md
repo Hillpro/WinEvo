@@ -26,7 +26,7 @@ about capabilities they can't deliver.
 | `dryRun` block + `dryRun` $def | both manifests + schema | Dry-run executor (roadmap) |
 | `localizedResourceRef` $def | schema only | Re-introduced with undo / dryRun (its only consumers) |
 | Sub-action step (`subActionStep` $def, `parameterBindings` $def, `step.oneOf`) | schema only | Sub-action expander in `ActionExecutor` |
-| Operations: `registry-read`, `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `sysinternals-tool`, `system-restore-point` | schema enum | Each operation wired individually in `Actions.Operations` |
+| Operations: `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `sysinternals-tool`, `system-restore-point` | schema enum | Each operation wired individually in `Actions.Operations` |
 
 Parameter types `wifi-profile`, `file-path`, `directory-path`, `service-name`
 are kept in the live schema even though the UI renders them as plain text

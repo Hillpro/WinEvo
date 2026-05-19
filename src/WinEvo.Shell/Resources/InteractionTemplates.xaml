@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Per-mode DataTemplates for InteractionController. Merged into
+    Application.Resources via App.xaml; consumers reference the selector via
+    {StaticResource InteractionTemplateSelector}.
+
+    Templates use {Binding}, not x:Bind. The WinUI 3 XAML compiler rejects
+    x:DataType inside a standalone merged ResourceDictionary (silent
+    XamlCompiler.exe exit 1, no output.json).
+
+    Adding a new interaction mode = new property on
+    ParameterInputTemplateSelector + new DataTemplate slot below.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WinEvo.Shell"
+    xmlns:conv="using:WinEvo.Shell.Services">
+
+    <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+
+    <local:InteractionTemplateSelector x:Key="InteractionTemplateSelector">
+        <local:InteractionTemplateSelector.ButtonTemplate>
+            <DataTemplate>
+                <StackPanel Spacing="16">
+                    <!-- Parameter inputs. DataContext here is the ButtonInteractionController,
+                         so Detail.Parameters reaches the action's parameter list. -->
+                    <StackPanel Spacing="8"
+                                Visibility="{Binding Detail.HasParameters, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="Parameters" FontWeight="SemiBold" />
+                        <ItemsControl
+                            ItemsSource="{Binding Detail.Parameters}"
+                            ItemTemplateSelector="{StaticResource ParameterInputTemplateSelector}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button
+                            Content="Execute"
+                            Command="{Binding Detail.ExecuteCommand}"
+                            Style="{ThemeResource AccentButtonStyle}" />
+                        <ProgressRing
+                            IsActive="{Binding Detail.IsRunning}"
+                            Width="24" Height="24" />
+                    </StackPanel>
+                </StackPanel>
+            </DataTemplate>
+        </local:InteractionTemplateSelector.ButtonTemplate>
+
+        <local:InteractionTemplateSelector.ToggleTemplate>
+            <DataTemplate>
+                <!-- DataContext: ToggleInteractionController. The single boolean
+                     parameter is rendered AS the toggle here; we do not also
+                     surface it through Detail.Parameters. -->
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <ToggleSwitch
+                        IsOn="{Binding IsOn, Mode=TwoWay}"
+                        IsEnabled="{Binding IsInteractive}" />
+                    <ProgressRing
+                        IsActive="{Binding IsLoadingState}"
+                        Width="20" Height="20" />
+                    <ProgressRing
+                        IsActive="{Binding Detail.IsRunning}"
+                        Width="20" Height="20" />
+                </StackPanel>
+            </DataTemplate>
+        </local:InteractionTemplateSelector.ToggleTemplate>
+    </local:InteractionTemplateSelector>
+
+</ResourceDictionary>
