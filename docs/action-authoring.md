@@ -12,7 +12,7 @@
 > | `powershell`           | ✅ wired  | yes             |
 > | `command`              | ✅ wired  | yes             |
 > | `delay`                | ✅ wired  | yes             |
-> | `registry-read`        | 🔲 target | reference only  |
+> | `registry-read`        | ✅ wired  | yes             |
 > | `service-stop`         | 🔲 target | reference only  |
 > | `service-start`        | 🔲 target | reference only  |
 > | `service-restart`      | 🔲 target | reference only  |
@@ -188,9 +188,9 @@ Path variables (`%SystemRoot%`, `%ProgramFiles%`, etc.) are expanded via `Enviro
 }
 ```
 
-Additional wired operations: `registry-delete` (delete a value or an entire subtree — idempotent) and `delay` (cooperative wait, e.g. between `netsh disconnect` / `connect` steps).
+Additional wired operations: `registry-delete` (delete a value or an entire subtree — idempotent), `registry-read` (read a value; returns `{ present, kind, data }` — used to seed a toggle's initial state from the live registry), and `delay` (cooperative wait, e.g. between `netsh disconnect` / `connect` steps).
 
-Still *(reference only)*: `registry-read`, `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `sysinternals-tool`, `system-restore-point`. None are in the live schema; they live in [manifest-reference/action.schema.json](manifest-reference/action.schema.json) and will be added back as each operation is wired.
+Still *(reference only)*: `service-stop`, `service-start`, `service-restart`, `file-delete`, `file-copy`, `file-move`, `sysinternals-tool`, `system-restore-point`. None are in the live schema; they live in [manifest-reference/action.schema.json](manifest-reference/action.schema.json) and will be added back as each operation is wired.
 
 ## Templating
 

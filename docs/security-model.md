@@ -31,7 +31,7 @@ What happens to a community manifest dropped into `%LOCALAPPDATA%\WinEvo\Actions
 - **Parsed** — ✅ lenient parse; unknown properties ignored. *(not implemented yet)* schema validation via `JsonSchema.Net`.
 - **Rendered in the UI with declared warnings and severity** — ✅ severity-adapted `ContentDialog` gates execution: `info`/`warning` show a plain Continue, `danger` requires an "I understand" checkbox, `critical` additionally requires the user to type the action name. Warning keys resolve against `resources/Strings.{en,fr}.json` with `{token}` interpolation; dedup by key with max severity per key wins.
 - **Never auto-run; the user always confirms** — ✅ execution requires an explicit click on the detail view, followed by the confirmation dialog above when warnings are declared.
-- **Executed using only built-in operations, whose implementations have been reviewed** — ✅ 8 operations wired: `registry-set`, `registry-delete`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`. Manifests that use any other operation fail cleanly at runtime (`operation 'X' is not implemented`).
+- **Executed using only built-in operations, whose implementations have been reviewed** — ✅ 9 operations wired: `registry-set`, `registry-delete`, `registry-read`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`. Manifests that use any other operation fail cleanly at runtime (`operation 'X' is not implemented`).
 
 ## `external-process`, `builtin-tool`, `powershell`, and `command`
 
