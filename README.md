@@ -84,9 +84,11 @@ dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64
 
 The portable command uses the `Portable-win-x64` publish profile in [src/WinEvo.Shell/Properties/PublishProfiles/](src/WinEvo.Shell/Properties/PublishProfiles/).
 
-MSIX is unsigned today; code-signing setup is still TODO. The portable output runs on a clean Windows 11 22000+ machine without any prerequisite installs.
+The portable output runs on a clean Windows 11 22000+ machine without any prerequisite installs.
 
-There is no release pipeline yet, so no public download. Producing a release `.zip` (publish + compress + SHA-256) is a manual step until CI/CD is wired up.
+**0.1.0 ships portable-only.** The MSIX / Store path is deferred to 0.2.0: under MSIX the agent runs inside a Windows Container silo that redirects its registry writes away from the real user hive, so settings appear to change in-app but don't actually take effect. Portable has no container and is unaffected.
+
+Release `.zip` production (publish + compress + SHA-256) is currently a manual step; a tag-triggered CI pipeline is still TODO.
 
 ## Portable distribution (end users)
 

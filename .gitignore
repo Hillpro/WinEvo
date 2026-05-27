@@ -6,6 +6,9 @@ publish/
 BuildOutput/
 TestResults/
 
+# Release artifacts
+dist/
+
 # User-specific files
 *.user
 *.suo
