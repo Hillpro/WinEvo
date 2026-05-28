@@ -51,7 +51,13 @@ jobs:
         run: dotnet restore WinEvo.slnx
 
       - name: Publish portable (self-contained win-x64)
-        run: dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64 -p:Version=${{ steps.ver.outputs.version }}
+        # SelfContained and RuntimeIdentifier are passed on the CLI (not just
+        # via the profile) so they become global MSBuild properties that
+        # propagate to the build-order-only Agent ProjectReference. Without
+        # this, the Agent gets a framework-dependent build and the portable
+        # zip's agent\ folder has no .NET runtime — the broker fails on any
+        # machine without .NET 10 installed.
+        run: dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64 -p:SelfContained=true -p:RuntimeIdentifier=win-x64 -p:Version=${{ steps.ver.outputs.version }}
 
       - name: Package zip
         id: pack
