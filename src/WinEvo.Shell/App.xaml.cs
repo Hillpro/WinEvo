@@ -1,7 +1,9 @@
+using System.Runtime.InteropServices;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.AppLifecycle;
 using WinEvo.Shell.Core;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels;
@@ -39,8 +41,11 @@ public partial class App : Application
         InitializeComponent();
     }
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        var primary = await HandleSecondaryLaunchAsync();
+        primary.Activated += (_, e) => OnSecondaryActivation(e);
+
         // WinUI 3 does not automatically install a SynchronizationContext for the
         // dispatcher thread in all unpackaged bootstrap scenarios. Without it,
         // `await … ConfigureAwait(true)` does not reliably resume on the UI thread
@@ -169,4 +174,57 @@ public partial class App : Application
         // Deliberately do not call e.SetObserved().
         // Unobserved exceptions are fatal by default
     }
+
+    /// <summary>
+    /// Single-instance gate. Returns the primary <see cref="AppInstance"/>
+    /// the caller should subscribe to for redirected activations. If the
+    /// current process is a secondary launch, this method forwards the
+    /// activation to the primary and terminates the process — it does not
+    /// return on that path. The key is session-scoped so each user session
+    /// has its own primary; a future tray-icon launcher reuses this key to
+    /// surface the Shell.
+    /// </summary>
+    private static async Task<AppInstance> HandleSecondaryLaunchAsync()
+    {
+        var activatedArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
+        var key = $"WinEvo.Shell.User.{System.Diagnostics.Process.GetCurrentProcess().SessionId}";
+        var primary = AppInstance.FindOrRegisterForKey(key);
+        if (!primary.IsCurrent)
+        {
+            ShellLog.Write($"secondary launch detected; redirecting to primary (pid={primary.ProcessId})");
+            await primary.RedirectActivationToAsync(activatedArgs);
+            // Application.Current.Exit() is unreliable mid-launch; Microsoft's
+            // own AppLifecycle sample uses Process.Kill for the same reason.
+            System.Diagnostics.Process.GetCurrentProcess().Kill();
+        }
+        return primary;
+    }
+
+    /// <summary>
+    /// Called when a secondary launch redirects its activation to this
+    /// primary instance. Restores the window if minimized and brings it
+    /// to the foreground.
+    /// </summary>
+    internal void OnSecondaryActivation(AppActivationArguments args)
+    {
+        if (_window is null) return;
+        _window.DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_window.AppWindow.Presenter is OverlappedPresenter presenter
+                && presenter.State == OverlappedPresenterState.Minimized)
+            {
+                presenter.Restore();
+            }
+            _window.AppWindow.Show();
+            // Foreground rights default to the originally-foreground process under
+            // Windows focus-stealing rules; AppInstance.RedirectActivationToAsync
+            // transfers them, but make the intent explicit.
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(_window);
+            SetForegroundWindow(hwnd);
+        });
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
 }
