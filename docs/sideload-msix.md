@@ -91,7 +91,7 @@ On the machine where you want to install WinEvo (your dev box or the smoke-test 
 Get-AppxPackage Hillpro.WinEvo | Remove-AppxPackage
 ```
 
-Or use Settings → Apps → Installed apps. The Shell logs at `%LOCALAPPDATA%\WinEvo\shell.log` and the agent log at `%TEMP%\winevo-agent.log` are not removed automatically — clear those manually if you want a fully clean state.
+Or use Settings → Apps → Installed apps. The logs at `%LOCALAPPDATA%\WinEvo\` (`shell.log` and `agent.log`) are not removed automatically — clear that folder manually if you want a fully clean state.
 
 ## Removing the trusted dev cert
 

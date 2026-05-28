@@ -63,7 +63,7 @@ Opt-in per manifest (target shape: `execution.createRestorePoint: true`). When w
 
 ## Audit log
 
-- ✅ **Diagnostic log** — the agent writes startup events and unhandled exceptions to `%TEMP%\winevo-agent.log` (`WinEvo.Agent.Core.AgentLog`). This is the only log today and it's for troubleshooting, not auditing.
+- ✅ **Diagnostic log** — the agent writes startup events and unhandled exceptions to `%LOCALAPPDATA%\WinEvo\agent.log`. The Shell logs to `shell.log` in the same folder. These are for troubleshooting, not auditing.
 - *(not implemented yet)* **Execution audit log** at `%ProgramData%\WinEvo\Logs\executions.jsonl` — will record execution id, action id, version, parameters, outcome (success / failed / cancelled / rolled-back), per-step result + duration, and undo-state reference. Append-only, no delete API. The Shell's History view will browse past executions and drive Undo.
 
 ## Supply chain

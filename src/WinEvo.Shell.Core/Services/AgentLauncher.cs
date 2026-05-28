@@ -132,6 +132,14 @@ public sealed class AgentLauncher : IAsyncDisposable
         }
         catch (Win32Exception ex) when (elevated && ex.NativeErrorCode == UacCancelledHResult)
         {
+            // 1223 (ERROR_CANCELLED) is a UAC decline — but ShellExecute also
+            // returns it when SmartScreen silently blocks an unsigned agent
+            // carrying the Mark-of-the-Web (downloaded build). The hidden
+            // window style suppresses SmartScreen's UI, so without this line
+            // the failure leaves no trace anywhere.
+            ShellLog.Write(
+                $"Elevated agent launch cancelled (ERROR_CANCELLED 1223): {ex.Message}. " +
+                "Cause is a UAC decline or SmartScreen blocking an unsigned/downloaded agent (Mark-of-the-Web).");
             throw new ElevationCancelledException("User declined the elevation prompt.", ex);
         }
     }

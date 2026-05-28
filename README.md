@@ -70,7 +70,7 @@ dotnet test    WinEvo.slnx
 dotnet run --project src/WinEvo.Shell     # or F5 in Visual Studio
 ```
 
-Agent diagnostic log: `%TEMP%\winevo-agent.log` (startup events, pipe-security outcomes, unhandled exceptions — essential for elevated runs where the agent has no visible stdio).
+Agent diagnostic log: `%LOCALAPPDATA%\WinEvo\agent.log` (startup events, pipe-security outcomes, unhandled exceptions — essential for elevated runs where the agent has no visible stdio). The Shell logs alongside it as `shell.log` in the same folder.
 
 ### Release publish
 
@@ -119,7 +119,7 @@ WinEvo/
 └── (.NET and WinAppSDK runtimes — bundled; no separate installs needed)
 ```
 
-**Uninstall.** Delete the `WinEvo/` folder. The Shell writes diagnostic logs to `%LOCALAPPDATA%\WinEvo\shell.log` and the agent writes to `%TEMP%\winevo-agent.log` — clear those manually if you want a fully clean removal.
+**Uninstall.** Delete the `WinEvo/` folder. Both processes write diagnostic logs to `%LOCALAPPDATA%\WinEvo\` (`shell.log` and `agent.log`) — clear that folder manually if you want a fully clean removal.
 
 ## Contributing actions
 
