@@ -11,7 +11,7 @@
   <Identity
     Name="Hillpro.WinEvo"
     Publisher="CN=FA93D602-3A7F-4710-9AD4-25441C81F429"
-    Version="0.1.0.0" />
+    Version="0.2.0.0" />
 
   <Properties>
     <DisplayName>WinEvo</DisplayName>
