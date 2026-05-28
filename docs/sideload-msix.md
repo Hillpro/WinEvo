@@ -48,7 +48,7 @@ The cert lives in your `CurrentUser\My` store; MSBuild reads it from there at si
 With the `.csproj.user` in place, the Shell csproj engages signing automatically:
 
 ```bash
-dotnet publish src/WinEvo.Shell -c Release -r win-x64 \
+dotnet publish src/WinEvo.Shell -c Release -r win-x64 --self-contained true \
   -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true
 ```
 
