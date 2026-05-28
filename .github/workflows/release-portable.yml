@@ -1,0 +1,91 @@
+name: Release (portable)
+
+# Builds the self-contained portable win-x64 zip and attaches it to the
+# GitHub Release for the triggering tag.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for a manual run (e.g. 0.2.0). Tag runs ignore this.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write      # create the release + upload assets
+  id-token: write      # build-provenance attestation
+  attestations: write  # build-provenance attestation
+
+jobs:
+  portable:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $v = $env:GITHUB_REF -replace '^refs/tags/v', ''
+          } elseif ('${{ github.event.inputs.version }}' -ne '') {
+            $v = '${{ github.event.inputs.version }}'
+          } else {
+            $props = Get-Content Directory.Build.props -Raw
+            $v = [regex]::Match($props, '<VersionPrefix>([^<]+)</VersionPrefix>').Groups[1].Value
+          }
+          if (-not $v) { throw 'Could not resolve a version.' }
+          Write-Host "Resolved version: $v"
+          "version=$v" | Add-Content -Path $env:GITHUB_OUTPUT
+
+      - name: Restore
+        run: dotnet restore WinEvo.slnx
+
+      - name: Publish portable (self-contained win-x64)
+        run: dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64 -p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Package zip
+        id: pack
+        shell: pwsh
+        run: |
+          $ver = '${{ steps.ver.outputs.version }}'
+          $publishDir = Get-ChildItem -Recurse -Directory -Path src\WinEvo.Shell\bin\Release -Filter publish |
+                        Select-Object -First 1 -ExpandProperty FullName
+          if (-not $publishDir) { throw 'Publish output directory not found.' }
+          Write-Host "Publish dir: $publishDir"
+
+          $name = "WinEvo-$ver-win-x64.zip"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $zip = "dist\$name"
+          Compress-Archive -Path "$publishDir\*" -DestinationPath $zip -Force
+          "zip=$zip" | Add-Content -Path $env:GITHUB_OUTPUT
+
+      - name: Attest build provenance
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: ${{ steps.pack.outputs.zip }}
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinEvo-portable-win-x64
+          path: dist/*.zip
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF -replace '^refs/tags/', ''
+          gh release create $tag '${{ steps.pack.outputs.zip }}' --generate-notes --title $tag
