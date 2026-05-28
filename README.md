@@ -9,7 +9,7 @@ An open-source optimizer and tweaker for Windows 11, built as a WinUI 3 applicat
 
 ## Status
 
-🚧 **Alpha (0.1.0, portable-only).** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions with a severity-gated confirmation dialog. Nine operations are wired (`registry-set`, `registry-delete`, `registry-read`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`); the live schema is trimmed to those. Roadmap operations (`service-*`, `file-*`, `system-restore-point`, `sysinternals-tool`) and target manifest features (undo, dry-run, preconditions, sub-actions, restore points, progress streaming) are tracked in [docs/manifest-reference/](docs/manifest-reference/). Spawned children are kept under a Windows Job Object so they die with the agent. IPC is length-prefixed JSON over a named pipe; gRPC (`.proto` already defined) is the target transport.
+🚧 **Alpha (0.1.1, portable-only).** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions with a severity-gated confirmation dialog. Nine operations are wired (`registry-set`, `registry-delete`, `registry-read`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`); the live schema is trimmed to those. Roadmap operations (`service-*`, `file-*`, `system-restore-point`, `sysinternals-tool`) and target manifest features (undo, dry-run, preconditions, sub-actions, restore points, progress streaming) are tracked in [docs/manifest-reference/](docs/manifest-reference/). Spawned children are kept under a Windows Job Object so they die with the agent. IPC is length-prefixed JSON over a named pipe; gRPC (`.proto` already defined) is the target transport.
 
 ## Goals
 
@@ -91,7 +91,7 @@ The portable command uses the `Portable-win-x64` publish profile in [src/WinEvo.
 
 The portable output runs on a clean Windows 11 22000+ machine without any prerequisite installs.
 
-**0.1.0 ships portable-only.** The MSIX / Store path is deferred to 0.2.0: under MSIX the agent runs inside a Windows Container silo that redirects its registry writes away from the real user hive, so settings appear to change in-app but don't actually take effect. Portable has no container and is unaffected.
+**0.1.x ships portable-only.** The MSIX / Store path is deferred to 0.2.0: under MSIX the agent runs inside a Windows Container silo that redirects its registry writes away from the real user hive, so settings appear to change in-app but don't actually take effect. Portable has no container and is unaffected.
 
 Release `.zip` production (publish + compress + SHA-256) is currently a manual step; a tag-triggered CI pipeline is still TODO.
 
