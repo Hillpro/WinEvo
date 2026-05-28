@@ -4,22 +4,26 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  IgnorableNamespaces="uap rescap desktop">
+  xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
+  IgnorableNamespaces="uap rescap desktop desktop6">
 
-  <!-- Publisher must match the Subject of the cert used to sign the MSIX,
-       exactly. Today this is a self-signed dev cert (CN=Hillpro); when a
-       CA-issued or Store-signed cert lands, both this Publisher and the
-       cert Subject must change in lockstep. Name follows the
-       Publisher.AppName convention. -->
+  <!-- Partner Center-assigned Identity for WinEvo. -->
   <Identity
     Name="Hillpro.WinEvo"
-    Publisher="CN=Hillpro"
+    Publisher="CN=FA93D602-3A7F-4710-9AD4-25441C81F429"
     Version="0.1.0.0" />
 
   <Properties>
     <DisplayName>WinEvo</DisplayName>
     <PublisherDisplayName>Hillpro</PublisherDisplayName>
     <Logo>Images\StoreLogo.png</Logo>
+    <!-- Disables run-time HKCU registry-write virtualization for the whole
+         package, so the agent's writes land on real HKCU instead of the
+         per-app silo at \REGISTRY\WC\Silo<guid>\… Pairs with the
+         `unvirtualizedResources` rescap capability below — both are required;
+         the capability is the gate, this property is the switch.
+         Doc: https://learn.microsoft.com/en-us/windows/msix/desktop/flexible-virtualization -->
+    <desktop6:RegistryWriteVirtualization>disabled</desktop6:RegistryWriteVirtualization>
   </Properties>
 
   <Dependencies>
@@ -63,5 +67,10 @@
          not elevation. Elevation flows through the agent (UAC) per
          docs/architecture.md. -->
     <rescap:Capability Name="runFullTrust" />
+    <!-- Gate for the desktop6:RegistryWriteVirtualization=disabled property
+         in <Properties> — both required to break HKCU silo redirection
+         (capability alone leaves redirection active). Restricted capability;
+         needs Store-review justification at Partner Center submission. -->
+    <rescap:Capability Name="unvirtualizedResources" />
   </Capabilities>
 </Package>

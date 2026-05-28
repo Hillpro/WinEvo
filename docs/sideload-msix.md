@@ -6,14 +6,14 @@ Sideload-installing an MSIX means: sign with a certificate, install that certifi
 
 ## One-time on the dev machine: generate a self-signed cert
 
-The cert's subject **must** match the `Publisher` attribute in [src/WinEvo.Shell/Package.appxmanifest](../src/WinEvo.Shell/Package.appxmanifest) exactly. Today that's `CN=Hillpro` — keep these in sync if either changes.
+The cert's subject **must** match the `Publisher` attribute in [src/WinEvo.Shell/Package.appxmanifest](../src/WinEvo.Shell/Package.appxmanifest) exactly.
 
 Run from the repo root in PowerShell:
 
 ```powershell
 $cert = New-SelfSignedCertificate `
     -Type Custom `
-    -Subject "CN=Hillpro" `
+    -Subject "CN=FA93D602-3A7F-4710-9AD4-25441C81F429" `
     -KeyUsage DigitalSignature `
     -FriendlyName "WinEvo Dev Cert" `
     -CertStoreLocation "Cert:\CurrentUser\My" `
@@ -99,7 +99,7 @@ Once you no longer need to install signed-by-dev-cert WinEvo builds:
 
 ```powershell
 Get-ChildItem Cert:\LocalMachine\TrustedPeople `
-  | Where-Object { $_.Subject -eq "CN=Hillpro" } `
+  | Where-Object { $_.Subject -eq "CN=FA93D602-3A7F-4710-9AD4-25441C81F429" } `
   | Remove-Item
 ```
 
