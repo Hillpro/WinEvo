@@ -10,7 +10,6 @@
     <Project Path="src/WinEvo.Ipc/WinEvo.Ipc.csproj" />
     <Project Path="src/WinEvo.Shell.Core/WinEvo.Shell.Core.csproj" />
     <Project Path="src/WinEvo.Shell/WinEvo.Shell.csproj" />
-    <Project Path="src/WinEvo.Tools.Sysinternals/WinEvo.Tools.Sysinternals.csproj" />
     <Project Path="src/WinEvo.Tray/WinEvo.Tray.csproj" />
   </Folder>
   <Folder Name="/tests/">

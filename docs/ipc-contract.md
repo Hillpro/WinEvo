@@ -1,6 +1,6 @@
 # IPC contract
 
-> **Current runtime status:** the Shell ↔ Agent link is implemented as **length-prefixed JSON messages over a named pipe** (see [`WinEvo.Ipc/PipeFraming.cs`](../src/WinEvo.Ipc/PipeFraming.cs) and [`PipeMessages.cs`](../src/WinEvo.Ipc/PipeMessages.cs)). The gRPC contract described below is the **target design** — the `.proto` already lives in [`WinEvo.Contracts/Protos/agent-service.proto`](../src/WinEvo.Contracts/Protos/agent-service.proto) and the `Grpc.Tools` package generates client + server stubs at build time, but neither end hosts/consumes the generated code yet. Everything else in this document (pipe naming, ACLs, client authentication, handshake/versioning semantics) applies to both the JSON and the future gRPC transport.
+> **Current runtime status:** the Shell ↔ Agent link is implemented as **length-prefixed JSON messages over a named pipe** (see [`WinEvo.Ipc/PipeFraming.cs`](../src/WinEvo.Ipc/PipeFraming.cs) and [`PipeMessages.cs`](../src/WinEvo.Ipc/PipeMessages.cs)). The gRPC contract described below is the **target design** — the `.proto` lives in [`WinEvo.Contracts/Protos/agent-service.proto`](../src/WinEvo.Contracts/Protos/agent-service.proto) as a **non-building design document**: the `Grpc.Tools` codegen and the gRPC runtime packages have been **removed for now** (the bring-back recipe is in `WinEvo.Contracts.csproj`), so nothing generates or consumes stubs today. The `.proto` may therefore lag the live JSON `PipeMessages`. Everything else in this document (pipe naming, ACLs, client authentication, handshake/versioning semantics) is intended to apply to both the JSON and the future gRPC transport — but see the per-section status notes for what is actually wired.
 
 ## Transport
 
@@ -46,6 +46,8 @@ message HandshakeResponse {
 ```
 
 ### Versioning policy
+
+> **Status — target, not enforced yet.** The handshake already carries `protocol_version`/`agent_version`/`supported_operations`, but none of the skew checks below are implemented: today the agent answers any handshake and never rejects on version (`AgentHost.HandleAsync`), and the Shell does not gate actions on `agent_version`/`supported_operations`. This is harmless while the Shell and Agent ship in the same package and always update together; it becomes load-bearing the moment they can drift (a portable zip re-extracted over a stale agent, or a future auto-update that touches one and not the other). Wire these before independent updates are possible.
 
 - **protocol_version** mismatch → agent rejects the connection with `FAILED_PRECONDITION`. The Shell offers to update the agent.
 - **agent_version** older than an action's `minAgentVersion` → that specific action is marked unexecutable in the UI with an "update agent" CTA.

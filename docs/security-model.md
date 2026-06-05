@@ -37,7 +37,7 @@ What happens to a community manifest dropped into `%LOCALAPPDATA%\WinEvo\Actions
 
 These are the most powerful operations and deserve extra care.
 
-- `external-process` ✅ runs a user-supplied executable path. For community manifests the path should resolve to a system binary (`%SystemRoot%\System32\...`), a Sysinternals tool (mediated by `Tools.Sysinternals`), or a binary bundled with the manifest (future). *(not implemented yet)* — no validator currently flags arbitrary user-supplied paths or forces a `danger`-severity warning on them.
+- `external-process` ✅ runs a user-supplied executable path. For community manifests the path should resolve to a system binary (`%SystemRoot%\System32\...`), a Sysinternals tool (via a future resolver — no project exists yet), or a binary bundled with the manifest (future). *(not implemented yet)* — no validator currently flags arbitrary user-supplied paths or forces a `danger`-severity warning on them.
 - `builtin-tool` ✅ narrowed alias of `external-process` for stock Windows tools. Accepts a bare tool `name` (no path), appends `.exe` if missing, rejects any input containing `\`, `/`, `:`, or `..`, and always resolves against `Environment.SystemDirectory`. Preferred over raw `external-process` for `cipher`, `sc`, `ipconfig`, etc. because the manifest intent and the target binary are unambiguous at review time.
 - `powershell` ✅ runs a user-supplied script via `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command <script>`. `{{params.X}}` substitutions are rendered before dispatch. Community manifests using this operation should declare a `danger`-severity warning.
 - `command` ✅ runs a user-supplied `cmd.exe` script (single- or multi-line). Parameter values substituted via `{{...}}` are **not** auto-escaped; reviewers must scrutinise every parameter substitution that lands in a shell command.
@@ -69,7 +69,7 @@ Opt-in per manifest (target shape: `execution.createRestorePoint: true`). When w
 ## Supply chain
 
 - *(not implemented yet)* **Code signing** for Shell, Tray, Agent binaries. The future Authenticode client-signature check in the agent depends on this.
-- *(not implemented yet)* **Sysinternals tools** — will be downloaded from `live.sysinternals.com` over HTTPS and hash-verified against known-good fingerprints. The `Tools.Sysinternals` project is still a stub.
+- *(not implemented yet)* **Sysinternals tools** — will be downloaded from `live.sysinternals.com` over HTTPS and hash-verified against known-good fingerprints. No resolver project exists yet; it will be created when the `sysinternals-tool` operation is built.
 - ✅ **Dependencies pinned** in `Directory.Packages.props`; version bumps are deliberate.
 - *(future)* GitHub Actions workflows will use pinned action SHAs, not floating tags.
 

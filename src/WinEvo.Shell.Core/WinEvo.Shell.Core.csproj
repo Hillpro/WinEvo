@@ -8,11 +8,13 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.Logging" />
     <!-- DispatcherQueue type (Microsoft.UI.Dispatching) for UI marshaling. -->
     <PackageReference Include="Microsoft.WindowsAppSDK" />
   </ItemGroup>
+  <!-- No DI container or Microsoft.Extensions.Logging: services are constructed
+       directly in App.OnLaunched and diagnostics go through ShellLog (FileLog).
+       At this scale a container would be over-engineering. -->
+
 
   <ItemGroup>
     <ProjectReference Include="..\WinEvo.ActionModel\WinEvo.ActionModel.csproj" />

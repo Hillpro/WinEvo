@@ -6,11 +6,8 @@
     <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" />
-    <PackageReference Include="Microsoft.Extensions.Logging" />
-  </ItemGroup>
-
+  <!-- Hosting/Logging are re-added when service mode lands; diagnostics today
+       go through WinEvo.Contracts.FileLog (AgentLog), not Microsoft.Extensions.Logging. -->
   <ItemGroup>
     <ProjectReference Include="..\WinEvo.Actions.Operations\WinEvo.Actions.Operations.csproj" />
     <ProjectReference Include="..\WinEvo.Ipc\WinEvo.Ipc.csproj" />

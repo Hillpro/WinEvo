@@ -106,6 +106,10 @@ public sealed class AgentHost
 
     private async Task<PipeMessage> HandleAsync(PipeMessage request, CancellationToken ct) => request switch
     {
+        // TODO: this accepts any client handshake without checking hs.ProtocolVersion
+        // (or hs.ClientKind/ClientVersion). Reject on protocol-version skew per
+        // docs/ipc-contract.md "Versioning policy" before Shell and Agent can ship
+        // and update independently.
         HandshakeRequest hs => new HandshakeResponse
         {
             RequestId = hs.RequestId,

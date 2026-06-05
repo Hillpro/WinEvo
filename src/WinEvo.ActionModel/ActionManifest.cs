@@ -140,7 +140,6 @@ public sealed class DriveParameter : Parameter
 public sealed class Execution
 {
     public ExecutionMode Mode { get; init; } = ExecutionMode.Sequential;
-    public bool CreateRestorePoint { get; init; }
     public IReadOnlyList<ActionStep> Steps { get; init; } = [];
 }
 

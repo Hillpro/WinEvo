@@ -23,6 +23,11 @@ public sealed class HandshakeRequest : PipeMessage
 {
     public required string ClientKind { get; init; }
     public required string ClientVersion { get; init; }
+
+    // TODO: not validated agent-side yet. AgentHost.HandleAsync answers any
+    // handshake regardless of these fields. Enforce the skew checks in
+    // docs/ipc-contract.md "Versioning policy" before the Shell and Agent can
+    // update independently.
     public int ProtocolVersion { get; init; } = 1;
 }
 

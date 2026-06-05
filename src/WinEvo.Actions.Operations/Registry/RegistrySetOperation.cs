@@ -12,8 +12,7 @@ namespace WinEvo.Actions.Operations;
 ///   "key": "HKCU\\Software\\...",
 ///   "value": "ValueName",
 ///   "type": "DWORD",
-///   "data": 0,
-///   "backupForUndo": true }   // TODO: undo not wired yet
+///   "data": 0 }
 /// </code>
 /// The hive is the first path segment of <c>key</c>. Supported forms (case-insensitive):
 /// <c>HKCU</c>, <c>HKEY_CURRENT_USER</c>, <c>HKLM</c>, <c>HKEY_LOCAL_MACHINE</c>, <c>HKCR</c>,
@@ -30,9 +29,6 @@ public sealed class RegistrySetOperation : ActionOperation
     /// <summary>Raw JSON of the value to write; interpreted according to <see cref="DataType"/>.</summary>
     public required JsonElement Data { get; init; }
 
-    /// <summary>If true, the undo engine (when wired) will capture the prior value before writing.</summary>
-    public bool BackupForUndo { get; init; }
-
     public static RegistrySetOperation FromJson(JsonElement properties)
     {
         if (!properties.TryGetProperty("data", out var data))
@@ -43,8 +39,6 @@ public sealed class RegistrySetOperation : ActionOperation
             Value = RequireString(properties, "value"),
             DataType = RequireString(properties, "type"),
             Data = data.Clone(),
-            BackupForUndo = properties.TryGetProperty("backupForUndo", out var b)
-                && b.ValueKind == JsonValueKind.True,
         };
     }
 

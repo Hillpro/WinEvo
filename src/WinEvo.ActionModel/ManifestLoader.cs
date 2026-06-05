@@ -228,7 +228,6 @@ public static class ManifestLoader
                 "sequential-continue-on-error" => ExecutionMode.SequentialContinueOnError,
                 _ => ExecutionMode.Sequential,
             },
-            CreateRestorePoint = exec.TryGetProperty("createRestorePoint", out var crp) && crp.ValueKind == JsonValueKind.True,
             Steps = ParseSteps(exec),
         };
     }
