@@ -94,4 +94,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = $env:GITHUB_REF -replace '^refs/tags/', ''
-          gh release create $tag '${{ steps.pack.outputs.zip }}' --generate-notes --title $tag
+          # Release title is "WinEvo X.Y.Z", not the raw "vX.Y.Z" tag. The
+          # generated notes are a placeholder — hand-written notes replace
+          # them per docs/releasing.md.
+          $title = "WinEvo ${{ steps.ver.outputs.version }}"
+          gh release create $tag '${{ steps.pack.outputs.zip }}' --generate-notes --title $title
