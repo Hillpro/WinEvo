@@ -110,8 +110,21 @@ public sealed class AgentLauncher : IAsyncDisposable
             Arguments = "--broker",
         };
 
+        // Only the elevated path goes through ShellExecute, so only it can be
+        // stopped by SmartScreen. NotPresent for the unelevated path is the
+        // truthful answer: no marker can block a CreateProcess launch.
+        var markOfTheWeb = MarkOfTheWebState.NotPresent;
+
         if (elevated)
         {
+            // Clear the download marker before launching: a marked agent is
+            // blocked by SmartScreen with its UI suppressed, which reaches us
+            // as ERROR_CANCELLED and is otherwise indistinguishable from the
+            // user saying No to UAC. See MarkOfTheWeb for the full rationale.
+            markOfTheWeb = MarkOfTheWeb.Clear(_agentExePath);
+            if (markOfTheWeb != MarkOfTheWebState.NotPresent)
+                ShellLog.Write($"Download marker on agent binary: {markOfTheWeb}.");
+
             // UseShellExecute is required to trigger a UAC prompt via the runas
             // verb, and it's mutually exclusive with stdout/stderr redirection.
             // Paired with WinExe in the agent csproj to ensure no console window.
@@ -137,10 +150,18 @@ public sealed class AgentLauncher : IAsyncDisposable
             // carrying the Mark-of-the-Web (downloaded build). The hidden
             // window style suppresses SmartScreen's UI, so without this line
             // the failure leaves no trace anywhere.
+            //
+            // Having just cleared the marker narrows it down: if the file is
+            // clean, a decline is the only remaining explanation. Only a failed
+            // clear leaves SmartScreen as a live suspect.
+            var reason = markOfTheWeb == MarkOfTheWebState.ClearFailed
+                ? ElevationFailureReason.DownloadMarkerPresent
+                : ElevationFailureReason.UserDeclined;
+
             ShellLog.Write(
                 $"Elevated agent launch cancelled (ERROR_CANCELLED 1223): {ex.Message}. " +
-                "Cause is a UAC decline or SmartScreen blocking an unsigned/downloaded agent (Mark-of-the-Web).");
-            throw new ElevationCancelledException("User declined the elevation prompt.", ex);
+                $"Attributed to {reason} (download marker: {markOfTheWeb}).");
+            throw new ElevationCancelledException("Elevated agent launch was cancelled.", reason, ex);
         }
     }
 

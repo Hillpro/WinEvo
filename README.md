@@ -93,13 +93,15 @@ The portable output runs on a clean Windows 11 22000+ machine without any prereq
 
 **0.1.x ships portable-only.** The MSIX / Store path is deferred to 0.2.0: under MSIX the agent runs inside a Windows Container silo that redirects its registry writes away from the real user hive, so settings appear to change in-app but don't actually take effect. Portable has no container and is unaffected.
 
-Release `.zip` production (publish + compress + SHA-256) is currently a manual step; a tag-triggered CI pipeline is still TODO.
+Release `.zip` production is automated: [`.github/workflows/release-portable.yml`](.github/workflows/release-portable.yml) is tag-triggered (`v*`), publishes the portable zip, attests build provenance, and creates the GitHub Release.
 
 ## Portable distribution (end users)
 
 The portable zip is the no-install path: download, unzip, run. Recommended unzip location is somewhere under your user profile (e.g. `%LOCALAPPDATA%\WinEvo\`) so it doesn't need elevation to lay down. `Program Files` works too but requires admin to write.
 
 **SmartScreen.** The first launch will show *"Windows protected your PC"* because the build is not code-signed by a recognized CA. Click **More info → Run anyway**. The prompt goes away once distribution moves to a Store-signed package or a CA-issued code-signing cert.
+
+**Downloaded copies.** Windows marks every file extracted from a downloaded zip, and that marker used to make elevated actions fail with a bare *"Elevation declined"* — SmartScreen was blocking the privileged helper without showing a prompt. WinEvo now clears the marker from its own helper on first elevated launch, so this should not happen. If you still see that message without a UAC prompt appearing, unblock the archive and re-extract: right-click the downloaded `.zip` → **Properties** → tick **Unblock** → **OK**, then extract again.
 
 **Checksums.** Each release lists a SHA-256 next to the zip. Verify before running:
 

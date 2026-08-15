@@ -162,9 +162,18 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
             {
                 return await _agentLauncher.EnsureElevatedAsync(ct).ConfigureAwait(false);
             }
-            catch (ElevationCancelledException)
+            catch (ElevationCancelledException ex)
             {
-                await _dispatcher.RunOnUiAsync(() => Status = "Elevation was declined. Action not executed.").ConfigureAwait(false);
+                // Windows reports a declined prompt and a silently blocked
+                // launch with the same error, so say which one we believe it
+                // was rather than blaming the user for a prompt they may never
+                // have been shown.
+                var message = ex.Reason == ElevationFailureReason.DownloadMarkerPresent
+                    ? "Windows blocked the action because this copy was downloaded from the internet. "
+                      + "Right-click the downloaded .zip, open Properties, tick Unblock, then extract it again."
+                    : "Elevation was declined. Action not executed.";
+
+                await _dispatcher.RunOnUiAsync(() => Status = message).ConfigureAwait(false);
                 return null;
             }
         }
