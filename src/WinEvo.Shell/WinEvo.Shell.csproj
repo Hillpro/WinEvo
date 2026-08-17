@@ -9,13 +9,12 @@
     <AssemblyName>WinEvo</AssemblyName>
     <UseWinUI>true</UseWinUI>
 
-    <!-- Single-project MSIX. WindowsPackageType=None means default builds
-         produce the unpackaged exe; MSIX is opt-in via -p overrides at
-         publish time. Keeps `dotnet build` and `dotnet run` working as a
-         normal WinUI 3 unpackaged app. -->
+    <!-- Unpackaged app. This also switches on the WinAppSDK bootstrap
+         auto-initializer, which is what lets the portable build start
+         without a packaged identity — it is load-bearing, not leftover
+         MSIX plumbing. WinEvo no longer produces an MSIX at all; see
+         docs/distribution.md for why. -->
     <WindowsPackageType>None</WindowsPackageType>
-
-    <EnableMsixTooling>true</EnableMsixTooling>
 
     <!-- Bundle the WinAppSDK runtime when SelfContained=true. Set inside
          the csproj (not on the CLI) so the property does NOT propagate to
@@ -25,15 +24,6 @@
          NETSDK1152 (duplicate WinAppSDK runtime files). -->
     <WindowsAppSDKSelfContained Condition="'$(SelfContained)' == 'true'">true</WindowsAppSDKSelfContained>
 
-    <!-- MSIX signing is opt-in via WinEvo.Shell.csproj.user, which is
-         gitignored and per-developer. That sidecar sets
-         AppxPackageSigningEnabled=True + PackageCertificateThumbprint
-         pointing at a self-signed cert in CurrentUser\My. Without it,
-         MSIX packaging produces an unsigned package (WACK rejects, but
-         manifest validation still runs — useful for CI and clean clones).
-         See docs/sideload-msix.md for the per-machine setup. -->
-    <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
-
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- WinUI 3 patterns fight these two analyzers:
          CA1822: x:Bind binding helpers are instance methods by design.
@@ -41,14 +31,10 @@
     <NoWarn>$(NoWarn);CA1822;CA1001</NoWarn>
   </PropertyGroup>
 
-  <!-- MSIX-only items. The MSIX targets reject AppxManifest when
-       WindowsPackageType=None, so these are gated to packaging builds. -->
-  <ItemGroup Condition="'$(WindowsPackageType)' == 'MSIX'">
-    <AppxManifest Include="Package.appxmanifest">
-      <SubType>Designer</SubType>
-    </AppxManifest>
-    <Content Include="Images\**\*.png" />
-  </ItemGroup>
+  <!-- Package.appxmanifest and Images\ are intentionally NOT built. They are
+       kept as source material for the Store listing and as the seed for a
+       possible sparse package, not as packaging inputs. See
+       docs/distribution.md. -->
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
@@ -79,11 +65,11 @@
   </ItemGroup>
 
   <!-- Bring the Agent into the Shell's output under an agent\ subfolder. The
-       three targets below cover every output path: bin\ (dotnet build / run),
-       publish\ (dotnet publish), and the .msix (MSIX packaging). The
-       subfolder layout dodges NETSDK1152 — the Agent and Shell.Core both
-       reference ActionModel / Ipc / Contracts, so a flat-merge collides on
-       every shared transitive dependency.
+       two targets below cover both output paths: bin\ (dotnet build / run)
+       and publish\ (dotnet publish). The subfolder layout dodges NETSDK1152
+       — the Agent and Shell.Core both reference ActionModel / Ipc /
+       Contracts, so a flat-merge collides on every shared transitive
+       dependency.
 
        _AgentBinBase is the Agent project's base output dir without RID.
        _ResolveAgentOutputDir resolves AgentOutputDir to either the
@@ -121,23 +107,6 @@
           DestinationFiles="@(_AgentPublishFiles->'$(PublishDir)agent\%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true"
           Condition="Exists('$(AgentOutputDir)') And '$(PublishDir)' != ''" />
-  </Target>
-
-  <!-- PackagingOutputs registration → handles MSIX. The MSIX packager only
-       scans @(PackagingOutputs); files dropped into bin\ post-build are
-       invisible to it. -->
-  <Target Name="IncludeAgentInMsix"
-          AfterTargets="GetPackagingOutputs"
-          DependsOnTargets="_ResolveAgentOutputDir"
-          Condition="'$(WindowsPackageType)' == 'MSIX'">
-    <ItemGroup Condition="Exists('$(AgentOutputDir)')">
-      <_AgentMsixFiles Include="$(AgentOutputDir)**\*.*" />
-      <PackagingOutputs Include="@(_AgentMsixFiles)">
-        <TargetPath>agent\%(_AgentMsixFiles.RecursiveDir)%(_AgentMsixFiles.Filename)%(_AgentMsixFiles.Extension)</TargetPath>
-        <OutputGroup>BuiltProjectOutputGroup</OutputGroup>
-        <ProjectName>$(MSBuildProjectName)</ProjectName>
-      </PackagingOutputs>
-    </ItemGroup>
   </Target>
 
 </Project>

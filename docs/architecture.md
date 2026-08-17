@@ -60,12 +60,13 @@ Community extensibility lives at the **manifest** level — anyone can write a J
 
 ## Distribution
 
-Two distribution channels, both driven by the same source tree (single-project MSIX in `WinEvo.Shell`):
+See [distribution.md](distribution.md) for the full picture, including why MSIX was abandoned.
 
-1. **MSIX (Store / sideload)** — self-contained MSIX containing `WinEvo.exe`, `agent/WinEvo.Agent.exe`, the bundled .NET + WinAppSDK runtimes, action manifests, and resources. The Shell spawns the agent (unelevated by default, UAC-promoted on demand) using the `windows.fullTrustProcess` extension declared in `Package.appxmanifest`.
-2. **Unpackaged / portable** — self-contained zip with the same layout as the MSIX payload, minus the package manifest. Runs from any folder; agent is at `agent/WinEvo.Agent.exe` next to `WinEvo.exe`.
+1. ✅ **Unpackaged / portable** — self-contained zip containing `WinEvo.exe`, `agent/WinEvo.Agent.exe`, the bundled .NET + WinAppSDK runtimes, action manifests, and resources. Runs from any folder with no install and no admin rights; the Shell spawns the agent from `agent/WinEvo.Agent.exe` next to itself, unelevated by default and UAC-promoted on demand.
+2. 🔲 **Signed installer** *(target)* — an `.msi`/`.exe` built from `WinEvo.Installer.wixproj`, carrying the same payload. Also the route to a Store listing, under a policy that accepts a download URL to a signed installer instead of a package.
+3. ❌ **MSIX** — built during 0.1–0.2 and abandoned; the Store refused the restricted capability a packaged build needs in order to write real user settings.
 
-Both channels embed the agent **inside** the package — there is no separate agent MSI. *(target)* The eventual service-mode install will need a separate installer (likely the `WinEvo.Installer.wixproj`) because Microsoft Store certification does not allow packaged apps to silently register privileged Windows Services. Service mode is not wired today; only the on-demand UAC-elevated broker is shipped.
+Either shipping channel embeds the agent **inside** its own payload — there is no separate agent download. Service mode remains unwired; the installer in (2) is its prerequisite, since registering a `LocalSystem` service needs an installer that a packaged app could never provide.
 
 `WinEvo.Tray.exe` is a stub and is not yet shipped in either channel.
 

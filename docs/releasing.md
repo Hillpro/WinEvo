@@ -39,9 +39,9 @@ the app, not what the commit did.
 One exception to the order: on a patch release whose whole reason for
 existing is a fix, **Fixes** comes first. Everywhere else Highlights leads.
 
-Write for someone who does not know the codebase. "Customizations appeared
-to work but never took effect" beats "fixed registry virtualization in the
-MSIX container".
+Write for someone who does not know the codebase. "Downloaded copies
+couldn't run anything needing administrator rights" beats "cleared the
+Zone.Identifier ADS before ShellExecute".
 
 ```markdown
 ## Highlights

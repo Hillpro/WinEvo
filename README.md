@@ -16,7 +16,7 @@ An open-source optimizer and tweaker for Windows 11, built as a WinUI 3 applicat
 - Consolidate the tweaks, cleanups, and scripts Windows power users run manually into one polished app.
 - Let the community add new actions via JSON/YAML manifests without recompiling.
 - Run the UI unprivileged; elevate only when an action requires it, via an on-demand broker or an installed service (user choice).
-- Ship to the Microsoft Store (MSIX) **and** as a portable/unpackaged distribution.
+- Ship as a portable/unpackaged zip, with a signed installer planned alongside it ([docs/distribution.md](docs/distribution.md)).
 
 ## Requirements
 
@@ -75,23 +75,14 @@ Agent diagnostic log: `%LOCALAPPDATA%\WinEvo\agent.log` (startup events, pipe-se
 ### Release publish
 
 ```bash
-# Self-contained: bundles .NET + WinAppSDK runtimes (~140 MB)
-
-# MSIX (Store / sideload)
-# Output: src/WinEvo.Shell/AppPackages/WinEvo.Shell_<ver>_x64*/*.msix
-dotnet publish src/WinEvo.Shell -c Release -r win-x64 --self-contained true \
-  -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true
-
-# Portable (Unpackaged)
+# Portable, self-contained: bundles .NET + WinAppSDK runtimes
 # Output: src/WinEvo.Shell/bin/Release/net10.0-windows10.0.22000.0/win-x64/publish/
 dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64
 ```
 
-The portable command uses the `Portable-win-x64` publish profile in [src/WinEvo.Shell/Properties/PublishProfiles/](src/WinEvo.Shell/Properties/PublishProfiles/).
+This uses the `Portable-win-x64` publish profile in [src/WinEvo.Shell/Properties/PublishProfiles/](src/WinEvo.Shell/Properties/PublishProfiles/), and the output runs on a clean Windows 11 22000+ machine without any prerequisite installs.
 
-The portable output runs on a clean Windows 11 22000+ machine without any prerequisite installs.
-
-**0.1.x ships portable-only.** The MSIX / Store path is deferred to 0.2.0: under MSIX the agent runs inside a Windows Container silo that redirects its registry writes away from the real user hive, so settings appear to change in-app but don't actually take effect. Portable has no container and is unaffected.
+**Portable is the only build output today.** A signed installer is the next distribution milestone. MSIX/Store packaging was built and then abandoned — the Store refused the capability that lets a packaged build write real user settings; see [docs/distribution.md](docs/distribution.md).
 
 Release `.zip` production is automated: [`.github/workflows/release-portable.yml`](.github/workflows/release-portable.yml) is tag-triggered (`v*`), publishes the portable zip, attests build provenance, and creates the GitHub Release.
 

@@ -1,11 +1,28 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
+
+<!-- INERT — nothing builds this file.
+
+     WinEvo no longer produces an MSIX. The Store refused the
+     `unvirtualizedResources` capability twice, and without it a packaged
+     build cannot write real HKCU. Full reasoning and every alternative
+     that was closed off: docs/distribution.md. Distribution is the
+     portable zip plus a signed installer.
+
+     Kept because it still holds real information: the Partner Center
+     Identity (Name + Publisher GUID) and the visual-asset declarations
+     that go with Images\. If a sparse package is ever built for
+     identity-gated features, it starts from here — and note that a sparse
+     package IS subject to registry virtualization, so it would need
+     `unvirtualizedResources` re-added. That is legal there: approval is
+     only required when submitting a package to the Store, and a sparse
+     package is registered by our own installer. -->
+
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
-  IgnorableNamespaces="uap rescap desktop desktop6">
+  IgnorableNamespaces="uap rescap desktop">
 
   <!-- Partner Center-assigned Identity for WinEvo. -->
   <Identity
@@ -17,13 +34,6 @@
     <DisplayName>WinEvo</DisplayName>
     <PublisherDisplayName>Hillpro</PublisherDisplayName>
     <Logo>Images\StoreLogo.png</Logo>
-    <!-- Disables run-time HKCU registry-write virtualization for the whole
-         package, so the agent's writes land on real HKCU instead of the
-         per-app silo at \REGISTRY\WC\Silo<guid>\… Pairs with the
-         `unvirtualizedResources` rescap capability below — both are required;
-         the capability is the gate, this property is the switch.
-         Doc: https://learn.microsoft.com/en-us/windows/msix/desktop/flexible-virtualization -->
-    <desktop6:RegistryWriteVirtualization>disabled</desktop6:RegistryWriteVirtualization>
   </Properties>
 
   <Dependencies>
@@ -67,10 +77,5 @@
          not elevation. Elevation flows through the agent (UAC) per
          docs/architecture.md. -->
     <rescap:Capability Name="runFullTrust" />
-    <!-- Gate for the desktop6:RegistryWriteVirtualization=disabled property
-         in <Properties> — both required to break HKCU silo redirection
-         (capability alone leaves redirection active). Restricted capability;
-         needs Store-review justification at Partner Center submission. -->
-    <rescap:Capability Name="unvirtualizedResources" />
   </Capabilities>
 </Package>
