@@ -5,7 +5,7 @@ namespace WinEvo.Actions.Abstractions;
 /// <see cref="Actions"/> to build its catalog; the agent resolves an incoming
 /// action id with <see cref="Find"/>.
 /// </summary>
-public interface IActionRegistry
+public interface IActionCatalog
 {
     IReadOnlyList<ActionDefinition> Actions { get; }
 

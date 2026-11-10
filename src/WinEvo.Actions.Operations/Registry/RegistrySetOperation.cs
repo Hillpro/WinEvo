@@ -29,6 +29,15 @@ public sealed class RegistrySetOperation : ActionOperation
     /// <summary>Raw JSON of the value to write; interpreted according to <see cref="DataType"/>.</summary>
     public required JsonElement Data { get; init; }
 
+    /// <summary>A DWORD write, for actions written in code.</summary>
+    public static RegistrySetOperation Dword(string key, string value, int data) => new()
+    {
+        Key = key,
+        Value = value,
+        DataType = "DWORD",
+        Data = JsonSerializer.SerializeToElement(data),
+    };
+
     public static RegistrySetOperation FromJson(JsonElement properties)
     {
         if (!properties.TryGetProperty("data", out var data))

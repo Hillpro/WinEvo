@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="BingSearchResults_Name" xml:space="preserve">
+    <value>Bing search results in Windows search</value>
+  </data>
+  <data name="BingSearchResults_Description" xml:space="preserve">
+    <value>Toggles whether Bing web results appear in the Start and Search experience for the current user.</value>
+  </data>
+  <data name="BingSearchResults_SwitchLabel" xml:space="preserve">
+    <value>Show Bing results</value>
+  </data>
+  <data name="BingSearchResults_SwitchDescription" xml:space="preserve">
+    <value>When on, Windows search includes Bing web results. When off, only local results are shown.</value>
+  </data>
+  <data name="WipeFreeSpace_Name" xml:space="preserve">
+    <value>Wipe free space</value>
+  </data>
+  <data name="WipeFreeSpace_Description" xml:space="preserve">
+    <value>Overwrites free space on the selected drive so that deleted files can no longer be recovered with forensic tools.</value>
+  </data>
+  <data name="WipeFreeSpace_DriveLabel" xml:space="preserve">
+    <value>Drive</value>
+  </data>
+</root>
