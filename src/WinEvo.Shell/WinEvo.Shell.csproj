@@ -44,6 +44,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WinEvo.Shell.Core\WinEvo.Shell.Core.csproj" />
+    <!-- The Shell only lists these actions and renders their descriptors;
+         running them is the agent's job. -->
+    <ProjectReference Include="..\WinEvo.Actions\WinEvo.Actions.csproj" />
 
     <!-- Build-order-only reference so the agent exe is ready before we try to copy it. -->
     <ProjectReference Include="..\WinEvo.Agent\WinEvo.Agent.csproj">
@@ -51,17 +54,6 @@
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
       <Private>false</Private>
     </ProjectReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Ship the built-in action manifests next to the Shell. -->
-    <Content Include="..\..\actions\**\*.json" LinkBase="actions">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <!-- Ship shared i18n string bundles (resolved by StringBundle at runtime). -->
-    <Content Include="..\..\resources\Strings.*.json" LinkBase="resources">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <!-- Bring the Agent into the Shell's output under an agent\ subfolder. The

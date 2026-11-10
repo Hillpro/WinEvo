@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
+using WinEvo.Actions.Abstractions;
 using WinEvo.Ipc;
 using WinEvo.Shell.Core.Services;
 
@@ -15,34 +17,40 @@ namespace WinEvo.Shell.Core.ViewModels;
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject
 {
-    private readonly ActionCatalog _catalog;
     private readonly AgentLauncher _agentLauncher;
-    private readonly string? _language;
+    private readonly CultureInfo _culture;
     private readonly DispatcherQueue _dispatcher;
     private readonly IConfirmationService _confirmation;
-    private readonly StringBundle _strings;
     private readonly IParameterInputFactory _parameterFactory;
 
+    /// <param name="catalog">
+    /// Source of the action list. Only descriptors are read here; actions are
+    /// executed by the agent, never in this process.
+    /// </param>
+    /// <param name="culture">Language every action text is displayed in.</param>
     public MainViewModel(
-        ActionCatalog catalog,
+        IActionCatalog catalog,
         AgentLauncher agentLauncher,
-        string? language,
+        CultureInfo culture,
         DispatcherQueue dispatcher,
         IConfirmationService confirmation,
-        StringBundle strings,
         IParameterInputFactory parameterFactory)
     {
-        _catalog = catalog;
         _agentLauncher = agentLauncher;
-        _language = language;
+        _culture = culture;
         _dispatcher = dispatcher;
         _confirmation = confirmation;
-        _strings = strings;
         _parameterFactory = parameterFactory;
         _agentLauncher.StateChanged += OnAgentStateChanged;
+
+        var items = catalog.Actions
+            .Select(action => new ActionItemViewModel(action.Descriptor, culture))
+            .OrderBy(item => item.Category, StringComparer.Ordinal)
+            .ThenBy(item => item.DisplayName, StringComparer.Create(culture, ignoreCase: true));
+        Actions = new ObservableCollection<ActionItemViewModel>(items);
     }
 
-    public ObservableCollection<ActionItemViewModel> Actions { get; } = new();
+    public ObservableCollection<ActionItemViewModel> Actions { get; }
 
     [ObservableProperty]
     public partial ActionItemViewModel? SelectedAction { get; set; }
@@ -57,7 +65,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Detail = value is null
             ? null
-            : new ActionDetailViewModel(value, _language, _agentLauncher, _dispatcher, _confirmation, _strings, _parameterFactory);
+            : new ActionDetailViewModel(value, _culture, _agentLauncher, _dispatcher, _confirmation, _parameterFactory);
     }
 
     partial void OnDetailChanged(ActionDetailViewModel? oldValue, ActionDetailViewModel? newValue)
@@ -80,15 +88,6 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task InitialiseAsync(CancellationToken ct)
     {
-        await _catalog.LoadAsync(ct).ConfigureAwait(false);
-
-        await _dispatcher.RunOnUiAsync(() =>
-        {
-            Actions.Clear();
-            foreach (var manifest in _catalog.Manifests.OrderBy(m => m.Category).ThenBy(m => m.Name))
-                Actions.Add(new ActionItemViewModel(manifest, _language));
-        }).ConfigureAwait(false);
-
         try
         {
             await _dispatcher.RunOnUiAsync(() => AgentStatus = "Starting agent…").ConfigureAwait(false);

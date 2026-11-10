@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using WinEvo.ActionModel;
 using WinEvo.Shell.Core.Services;
@@ -17,7 +18,7 @@ public class ParameterInputFactoryTests
 
         var vm = factory.Create(
             new DriveParameter { Id = "drive", Type = "drive", Required = true, AllowedDriveTypes = ["fixed"] },
-            language: null);
+            culture: CultureInfo.InvariantCulture);
 
         var drive = Assert.IsType<DriveParameterInputViewModel>(vm);
         Assert.Equal(2, drive.DriveOptions.Count);
@@ -30,7 +31,7 @@ public class ParameterInputFactoryTests
     {
         var vm = Factory().Create(
             new IntegerParameter { Id = "n", Type = "integer", Required = true, Min = 1, Max = 10 },
-            language: null);
+            culture: CultureInfo.InvariantCulture);
 
         var integer = Assert.IsType<IntegerParameterInputViewModel>(vm);
         Assert.Equal(1d, integer.Minimum);
@@ -45,7 +46,7 @@ public class ParameterInputFactoryTests
         using var doc = JsonDocument.Parse("5");
         var vm = (IntegerParameterInputViewModel)Factory().Create(
             new IntegerParameter { Id = "n", Type = "integer", Default = doc.RootElement.Clone() },
-            language: null);
+            culture: CultureInfo.InvariantCulture);
 
         Assert.True(vm.HasValue);
         Assert.Equal(5d, vm.Value);
@@ -57,7 +58,7 @@ public class ParameterInputFactoryTests
     {
         var vm = Factory().Create(
             new BooleanParameter { Id = "b", Type = "boolean" },
-            language: null);
+            culture: CultureInfo.InvariantCulture);
 
         var boolean = Assert.IsType<BooleanParameterInputViewModel>(vm);
         Assert.False(boolean.Value);
@@ -70,7 +71,7 @@ public class ParameterInputFactoryTests
     {
         var vm = Factory().Create(
             new EnumParameter { Id = "level", Type = "enum", Choices = ["low", "medium", "high"] },
-            language: null);
+            culture: CultureInfo.InvariantCulture);
 
         var enumVm = Assert.IsType<EnumParameterInputViewModel>(vm);
         Assert.Equal(["low", "medium", "high"], enumVm.Choices);
@@ -89,7 +90,7 @@ public class ParameterInputFactoryTests
                 Choices = ["low", "medium", "high"],
                 Default = doc.RootElement.Clone(),
             },
-            language: null);
+            culture: CultureInfo.InvariantCulture);
 
         Assert.Equal("medium", vm.SelectedChoice);
     }
@@ -99,7 +100,7 @@ public class ParameterInputFactoryTests
     {
         var vm = Factory().Create(
             new StringParameter { Id = "name", Type = "string" },
-            language: null);
+            culture: CultureInfo.InvariantCulture);
 
         Assert.IsType<StringParameterInputViewModel>(vm);
     }
@@ -111,7 +112,7 @@ public class ParameterInputFactoryTests
         // — they render as TextBoxes until a dedicated VM is added.
         var vm = Factory().Create(
             new StringParameter { Id = "svc", Type = "service-name" },
-            language: null);
+            culture: CultureInfo.InvariantCulture);
 
         var str = Assert.IsType<StringParameterInputViewModel>(vm);
         str.Value = "wuauserv";
@@ -124,7 +125,7 @@ public class ParameterInputFactoryTests
     {
         var vm = (DriveParameterInputViewModel)Factory().Create(
             new DriveParameter { Id = "drive", Type = "drive" },
-            language: null);
+            culture: CultureInfo.InvariantCulture);
 
         Assert.False(vm.HasValue);
         Assert.Null(vm.ToJsonValue());

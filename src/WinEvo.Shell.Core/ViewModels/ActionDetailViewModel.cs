@@ -1,5 +1,5 @@
 using System.Collections.ObjectModel;
-using System.Text.Json.Nodes;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
@@ -22,29 +22,26 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     private readonly AgentLauncher _agentLauncher;
     private readonly DispatcherQueue _dispatcher;
     private readonly IConfirmationService _confirmation;
-    private readonly StringBundle _strings;
     private readonly CancellationTokenSource _liveStateRead = new();
 
     public ActionDetailViewModel(
         ActionItemViewModel item,
-        string? language,
+        CultureInfo culture,
         AgentLauncher agentLauncher,
         DispatcherQueue dispatcher,
         IConfirmationService confirmation,
-        StringBundle strings,
         IParameterInputFactory parameterFactory)
     {
         _agentLauncher = agentLauncher;
         _dispatcher = dispatcher;
         _confirmation = confirmation;
-        _strings = strings;
         Item = item;
-        Language = language;
+        Culture = culture;
 
-        foreach (var p in item.Manifest.Parameters)
-            Parameters.Add(parameterFactory.Create(p, language));
+        foreach (var p in item.Descriptor.Parameters)
+            Parameters.Add(parameterFactory.Create(p, culture));
 
-        Interaction = item.Manifest.Interaction switch
+        Interaction = item.Descriptor.Interaction switch
         {
             InteractionMode.Toggle => new ToggleInteractionController(this),
             _ => new ButtonInteractionController(this),
@@ -54,7 +51,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     }
 
     public ActionItemViewModel Item { get; }
-    public string? Language { get; }
+    public CultureInfo Culture { get; }
 
     public ObservableCollection<ParameterInputViewModel> Parameters { get; } = new();
 
@@ -94,7 +91,9 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
 
         try
         {
-            var warnings = WarningAggregator.Aggregate(Item.Manifest.Warnings, _strings, Language);
+            var warnings = Item.Descriptor.Warnings
+                .Select(warning => new ResolvedWarning(warning.Severity, warning.Message.Resolve(Culture)))
+                .ToList();
             if (warnings.Count > 0)
             {
                 var request = new ConfirmationRequest(Item.DisplayName, warnings);
@@ -157,7 +156,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     /// </summary>
     private async Task<IAgentClient?> ResolveClientAsync(CancellationToken ct)
     {
-        var requiresElevation = Item.Manifest.Requirements.Elevation == ElevationRequirement.Required;
+        var requiresElevation = Item.RequiresElevation;
 
         if (requiresElevation && !_agentLauncher.IsElevated)
         {

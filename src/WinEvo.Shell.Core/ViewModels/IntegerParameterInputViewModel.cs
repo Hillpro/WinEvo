@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,8 +14,8 @@ namespace WinEvo.Shell.Core.ViewModels;
 /// </summary>
 public sealed partial class IntegerParameterInputViewModel : ParameterInputViewModel
 {
-    public IntegerParameterInputViewModel(IntegerParameter parameter, string? language)
-        : base(parameter, language)
+    public IntegerParameterInputViewModel(IntegerParameter parameter, CultureInfo culture)
+        : base(parameter, culture)
     {
         IntegerParameter = parameter;
         Value = parameter.Default is { } def && def.ValueKind == JsonValueKind.Number && def.TryGetInt64(out var i)

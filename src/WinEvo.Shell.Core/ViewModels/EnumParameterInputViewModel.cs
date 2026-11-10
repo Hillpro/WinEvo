@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,8 +14,8 @@ namespace WinEvo.Shell.Core.ViewModels;
 /// </summary>
 public sealed partial class EnumParameterInputViewModel : ParameterInputViewModel
 {
-    public EnumParameterInputViewModel(EnumParameter parameter, string? language)
-        : base(parameter, language)
+    public EnumParameterInputViewModel(EnumParameter parameter, CultureInfo culture)
+        : base(parameter, culture)
     {
         Choices = new ObservableCollection<string>(parameter.Choices);
 

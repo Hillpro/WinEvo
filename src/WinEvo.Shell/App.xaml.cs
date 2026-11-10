@@ -1,9 +1,11 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.AppLifecycle;
+using WinEvo.Actions;
 using WinEvo.Shell.Core;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels;
@@ -54,9 +56,7 @@ public partial class App : Application
         SynchronizationContext.SetSynchronizationContext(
             new DispatcherQueueSynchronizationContext(dispatcherQueue));
 
-        var catalog = new ActionCatalog(ActionCatalog.ResolveDefaultRoot());
         _agentLauncher = new AgentLauncher(AgentLauncher.ResolveDefaultAgentPath());
-        var strings = new StringBundle(StringBundle.ResolveDefaultRoot());
 
         // Lazy XamlRoot capture: the lambda reads _window at call time, not at
         // construction time
@@ -64,15 +64,17 @@ public partial class App : Application
 
         var parameterFactory = new ParameterInputFactory(new SystemDriveProvider());
 
-        // TODO: detect system language / user preference instead of hard-coding English.
+        // Action text follows the user's Windows display language and falls
+        // back to English for languages without a translation.
         var viewModel = new MainViewModel(
-            catalog, _agentLauncher, language: "en", dispatcherQueue, confirmation, strings, parameterFactory);
+            new CoreActionCatalog(), _agentLauncher, CultureInfo.CurrentUICulture,
+            dispatcherQueue, confirmation, parameterFactory);
 
         _window = new MainWindow(viewModel);
         _window.AppWindow.Closing += OnAppWindowClosing;
         _window.Activate();
 
-        // Kick off catalog + agent startup on the UI dispatcher so the VM's
+        // Kick off agent startup on the UI dispatcher so the VM's
         // UI-touching updates run on the correct thread.
         dispatcherQueue.TryEnqueue(async () =>
         {

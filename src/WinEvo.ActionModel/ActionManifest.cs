@@ -72,6 +72,9 @@ public sealed class ActionWarning
 {
     public required WarningSeverity Severity { get; init; }
     public required string Key { get; init; }
+
+    /// <summary>What the user is told before confirming, in plain language.</summary>
+    public required LocalizableText Message { get; init; }
     public IReadOnlyDictionary<string, string> Tokens { get; init; }
         = new Dictionary<string, string>();
 }

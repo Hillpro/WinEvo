@@ -54,6 +54,9 @@ public class ActionTextTests
             if (descriptor.Description is not null)
                 yield return descriptor.Description;
 
+            foreach (var warning in descriptor.Warnings)
+                yield return warning.Message;
+
             foreach (var parameter in descriptor.Parameters)
             {
                 if (parameter.Name is not null)

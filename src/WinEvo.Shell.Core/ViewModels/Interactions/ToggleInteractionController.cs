@@ -21,9 +21,9 @@ public sealed class ToggleInteractionController : InteractionController, IDispos
 
     public ToggleInteractionController(ActionDetailViewModel detail) : base(detail)
     {
-        _toggleParameter = detail.Parameters.OfType<BooleanParameterInputViewModel>().SingleOrDefault()
-            ?? throw new InvalidOperationException(
-                $"action '{detail.Item.Manifest.Id}' is interaction:toggle but does not declare a single boolean parameter");
+        // A toggle action's only parameter is its switch; ToggleActionDefinition
+        // builds the descriptor that way.
+        _toggleParameter = detail.Parameters.OfType<BooleanParameterInputViewModel>().Single();
 
         _toggleParameter.UserChangedValue += OnUserChangedValue;
         _toggleParameter.PropertyChanged += OnParameterPropertyChanged;

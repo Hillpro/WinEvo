@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WinEvo.ActionModel;
@@ -17,9 +18,9 @@ public sealed partial class DriveParameterInputViewModel : ParameterInputViewMod
 {
     public DriveParameterInputViewModel(
         Parameter parameter,
-        string? language,
+        CultureInfo culture,
         IReadOnlyList<DriveOption> drives)
-        : base(parameter, language)
+        : base(parameter, culture)
     {
         DriveOptions = new ObservableCollection<DriveOption>(drives);
         SelectedDrive = DriveOptions.FirstOrDefault();

@@ -14,10 +14,9 @@ namespace WinEvo.Shell.Core.ViewModels;
 /// </summary>
 public abstract class ParameterInputViewModel : ObservableObject
 {
-    protected ParameterInputViewModel(Parameter parameter, string? language)
+    protected ParameterInputViewModel(Parameter parameter, CultureInfo culture)
     {
         Parameter = parameter;
-        var culture = language is null ? CultureInfo.InvariantCulture : CultureInfo.GetCultureInfo(language);
         DisplayName = parameter.Name?.Resolve(culture) ?? parameter.Id;
         DisplayDescription = parameter.Description?.Resolve(culture);
     }

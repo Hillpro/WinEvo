@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using WinEvo.ActionModel;
@@ -20,8 +21,8 @@ public sealed partial class BooleanParameterInputViewModel : ParameterInputViewM
 {
     private bool _value;
 
-    public BooleanParameterInputViewModel(BooleanParameter parameter, string? language)
-        : base(parameter, language)
+    public BooleanParameterInputViewModel(BooleanParameter parameter, CultureInfo culture)
+        : base(parameter, culture)
     {
         _value = parameter.Default is { } def
             && (def.ValueKind == JsonValueKind.True || def.ValueKind == JsonValueKind.False)

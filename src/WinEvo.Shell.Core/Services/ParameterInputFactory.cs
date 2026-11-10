@@ -1,3 +1,4 @@
+using System.Globalization;
 using WinEvo.ActionModel;
 using WinEvo.Shell.Core.ViewModels;
 
@@ -17,14 +18,14 @@ public sealed class ParameterInputFactory : IParameterInputFactory
         _drives = drives;
     }
 
-    public ParameterInputViewModel Create(Parameter parameter, string? language)
+    public ParameterInputViewModel Create(Parameter parameter, CultureInfo culture)
         => parameter switch
         {
             DriveParameter dp => new DriveParameterInputViewModel(
-                dp, language, _drives.Enumerate(dp.AllowedDriveTypes)),
-            IntegerParameter ip => new IntegerParameterInputViewModel(ip, language),
-            BooleanParameter bp => new BooleanParameterInputViewModel(bp, language),
-            EnumParameter ep => new EnumParameterInputViewModel(ep, language),
-            _ => new StringParameterInputViewModel(parameter, language),
+                dp, culture, _drives.Enumerate(dp.AllowedDriveTypes)),
+            IntegerParameter ip => new IntegerParameterInputViewModel(ip, culture),
+            BooleanParameter bp => new BooleanParameterInputViewModel(bp, culture),
+            EnumParameter ep => new EnumParameterInputViewModel(ep, culture),
+            _ => new StringParameterInputViewModel(parameter, culture),
         };
 }

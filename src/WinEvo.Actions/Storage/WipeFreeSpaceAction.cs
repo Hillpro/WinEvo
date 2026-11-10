@@ -24,8 +24,18 @@ public sealed class WipeFreeSpaceAction : ActionDefinition
         Elevation = ElevationRequirement.Required,
         Warnings =
         [
-            new ActionWarning { Severity = WarningSeverity.Warning, Key = "storage.wipe.longRunning" },
-            new ActionWarning { Severity = WarningSeverity.Info, Key = "storage.wipe.destructiveHint" },
+            new ActionWarning
+            {
+                Severity = WarningSeverity.Warning,
+                Key = "storage.wipe.longRunning",
+                Message = ActionText.For("WipeFreeSpace_LongRunningWarning"),
+            },
+            new ActionWarning
+            {
+                Severity = WarningSeverity.Info,
+                Key = "storage.wipe.destructiveHint",
+                Message = ActionText.For("WipeFreeSpace_DeletedFilesOnlyNote"),
+            },
         ],
         Parameters =
         [

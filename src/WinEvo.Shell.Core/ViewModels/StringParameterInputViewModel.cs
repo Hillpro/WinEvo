@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,8 +15,8 @@ namespace WinEvo.Shell.Core.ViewModels;
 /// </summary>
 public sealed partial class StringParameterInputViewModel : ParameterInputViewModel
 {
-    public StringParameterInputViewModel(Parameter parameter, string? language)
-        : base(parameter, language)
+    public StringParameterInputViewModel(Parameter parameter, CultureInfo culture)
+        : base(parameter, culture)
     {
         Value = parameter.Default is { } def && def.ValueKind == JsonValueKind.String
             ? def.GetString() ?? ""

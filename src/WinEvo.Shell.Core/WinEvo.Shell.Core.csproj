@@ -17,7 +17,7 @@
 
 
   <ItemGroup>
-    <ProjectReference Include="..\WinEvo.ActionModel\WinEvo.ActionModel.csproj" />
+    <ProjectReference Include="..\WinEvo.Actions.Abstractions\WinEvo.Actions.Abstractions.csproj" />
     <ProjectReference Include="..\WinEvo.Ipc\WinEvo.Ipc.csproj" />
   </ItemGroup>
 

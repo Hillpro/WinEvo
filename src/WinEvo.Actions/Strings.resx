@@ -33,4 +33,10 @@
   <data name="WipeFreeSpace_DriveLabel" xml:space="preserve">
     <value>Drive</value>
   </data>
+  <data name="WipeFreeSpace_LongRunningWarning" xml:space="preserve">
+    <value>This can take a while — from a few minutes up to several hours, depending on how big the drive is.</value>
+  </data>
+  <data name="WipeFreeSpace_DeletedFilesOnlyNote" xml:space="preserve">
+    <value>Your files stay safe. This only clears what you've already deleted so it can't be recovered later.</value>
+  </data>
 </root>

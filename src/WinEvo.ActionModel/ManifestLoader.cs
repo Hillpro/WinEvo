@@ -146,6 +146,7 @@ public static class ManifestLoader
                     _ => WarningSeverity.Info,
                 },
                 Key = RequireString(el, "key"),
+                Message = LocalizableText.Literal(RequireString(el, "key")),
                 Tokens = (IReadOnlyDictionary<string, string>?)tokens
                     ?? new Dictionary<string, string>(),
             });

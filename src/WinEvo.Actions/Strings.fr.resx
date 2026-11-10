@@ -33,4 +33,10 @@
   <data name="WipeFreeSpace_DriveLabel" xml:space="preserve">
     <value>Disque</value>
   </data>
+  <data name="WipeFreeSpace_LongRunningWarning" xml:space="preserve">
+    <value>Cela peut prendre du temps — de quelques minutes à plusieurs heures selon la taille du disque.</value>
+  </data>
+  <data name="WipeFreeSpace_DeletedFilesOnlyNote" xml:space="preserve">
+    <value>Vos fichiers ne sont pas touchés. Seuls les fichiers déjà supprimés sont effacés pour de bon, afin qu'ils ne puissent plus être récupérés.</value>
+  </data>
 </root>
