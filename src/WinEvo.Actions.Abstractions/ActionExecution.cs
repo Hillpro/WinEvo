@@ -23,11 +23,20 @@ public sealed class ActionExecution
 
     public IReadOnlyList<string> LogLines => _logLines;
 
+    /// <summary>The value of a parameter that is required or has a default. Throws when it has no value.</summary>
     public string GetString(string parameterId) => GetParameter<string>(parameterId);
 
     public bool GetBoolean(string parameterId) => GetParameter<bool>(parameterId);
 
     public long GetInteger(string parameterId) => GetParameter<long>(parameterId);
+
+    /// <summary>The value of an optional parameter, or <see langword="null"/> when the user left it empty.</summary>
+    public string? FindString(string parameterId)
+        => _parameters.ContainsKey(parameterId) ? GetString(parameterId) : null;
+
+    /// <inheritdoc cref="FindString"/>
+    public long? FindInteger(string parameterId)
+        => _parameters.ContainsKey(parameterId) ? GetInteger(parameterId) : null;
 
     /// <summary>
     /// Runs an operation the action cannot continue without. A failure is
@@ -42,8 +51,9 @@ public sealed class ActionExecution
     }
 
     /// <summary>
-    /// Runs an operation whose failure the action tolerates. The failure is
-    /// still recorded, so the execution as a whole reports it.
+    /// Runs an operation whose failure the action tolerates: the action
+    /// carries on. The failure is still recorded, and the execution as a
+    /// whole is reported as failed.
     /// </summary>
     /// <returns>Whether the operation succeeded.</returns>
     public async Task<bool> TryRunAsync(ActionOperation operation, CancellationToken cancellationToken)

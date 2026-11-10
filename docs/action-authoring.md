@@ -160,7 +160,9 @@ Each parameter becomes an input in the detail pane. Pick the class that matches 
 | `EnumParameter` | Drop-down | `Choices`, `Default` | `execution.GetString(id)` |
 | `DriveParameter` | Drop-down of the machine's drives | `AllowedDriveTypes` | `execution.GetString(id)` (the drive root, e.g. `C:\`) |
 
-A `Required` parameter with no value and no default stops the action before it starts. A parameter that is not required and has neither is simply absent: asking `execution` for it throws, so only read what you know is there.
+A `Required` parameter with no value and no default stops the action before it starts. A parameter that is not required and has neither is simply absent: read it with `execution.FindString(id)` or `execution.FindInteger(id)`, which return `null` in that case. The `Get` methods throw on an absent value.
+
+*(not implemented yet)* The agent does not check a value against the parameter's declaration. `Min`, `Max`, `Choices` and `AllowedDriveTypes` are enforced by the inputs in the window only, so an action must not assume a value respects them.
 
 *(not implemented yet)* Pickers for a Wi-Fi profile, a file, a folder or a service. Adding one means a new `Parameter` subclass, a view model, a XAML template, an entry in `ParameterInputTemplateSelector` and one line in `ParameterInputFactory`.
 

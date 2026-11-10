@@ -103,6 +103,32 @@ public class ActionExecutionTests
     }
 
     [Fact]
+    public void Find_returns_null_for_an_optional_parameter_left_empty()
+    {
+        var execution = NewExecution();
+
+        Assert.Null(execution.FindString("comment"));
+        Assert.Null(execution.FindInteger("passes"));
+    }
+
+    [Fact]
+    public void Find_returns_the_value_when_there_is_one()
+    {
+        var execution = NewExecution(new() { ["comment"] = "hello", ["passes"] = 3L });
+
+        Assert.Equal("hello", execution.FindString("comment"));
+        Assert.Equal(3L, execution.FindInteger("passes"));
+    }
+
+    [Fact]
+    public void Find_still_rejects_a_value_of_the_wrong_type()
+    {
+        var execution = NewExecution(new() { ["comment"] = 42L });
+
+        Assert.Throws<InvalidOperationException>(() => execution.FindString("comment"));
+    }
+
+    [Fact]
     public void Missing_parameter_is_reported_by_id()
     {
         var execution = NewExecution();

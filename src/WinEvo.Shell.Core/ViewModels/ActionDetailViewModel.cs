@@ -23,6 +23,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     private readonly DispatcherQueue _dispatcher;
     private readonly IConfirmationService _confirmation;
     private readonly CancellationTokenSource _liveStateRead = new();
+    private bool _disposed;
 
     public ActionDetailViewModel(
         ActionItemViewModel item,
@@ -215,8 +216,19 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
             {
                 foreach (var parameter in Parameters)
                 {
-                    if (liveValues.TryGetValue(parameter.Id, out var liveValue) && liveValue is not null)
+                    if (!liveValues.TryGetValue(parameter.Id, out var liveValue) || liveValue is null)
+                        continue;
+
+                    // One input refusing its value (a drive that is no longer
+                    // mounted) must not leave the others on their defaults.
+                    try
+                    {
                         parameter.ShowLiveValue(liveValue);
+                    }
+                    catch (Exception ex)
+                    {
+                        ShellLog.WriteException($"could not show the live value of '{Item.Id}' parameter '{parameter.Id}'", ex);
+                    }
                 }
             }).ConfigureAwait(false);
         }
@@ -241,6 +253,12 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     /// </summary>
     public void Dispose()
     {
+        // Reached twice when the user picks another action while the window
+        // is closing: once from the close handler, once from the selection.
+        if (_disposed)
+            return;
+        _disposed = true;
+
         _liveStateRead.Cancel();
         _liveStateRead.Dispose();
         (Interaction as IDisposable)?.Dispose();
