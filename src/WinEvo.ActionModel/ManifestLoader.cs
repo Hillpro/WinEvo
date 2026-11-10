@@ -168,8 +168,8 @@ public static class ManifestLoader
     {
         var id = RequireString(el, "id");
         var type = RequireString(el, "type");
-        var name = OptionalString(el, "name");
-        var description = OptionalString(el, "description");
+        var name = OptionalText(el, "name");
+        var description = OptionalText(el, "description");
         var required = el.TryGetProperty("required", out var r) && r.ValueKind == JsonValueKind.True;
         JsonElement? @default = el.TryGetProperty("default", out var d) ? d.Clone() : null;
         var state = ParseState(el);
@@ -332,4 +332,7 @@ public static class ManifestLoader
         => el.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+
+    private static LocalizableText? OptionalText(JsonElement el, string property)
+        => OptionalString(el, property) is { } text ? LocalizableText.Literal(text) : null;
 }

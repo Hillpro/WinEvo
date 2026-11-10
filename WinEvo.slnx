@@ -14,6 +14,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/WinEvo.ActionModel.Tests/WinEvo.ActionModel.Tests.csproj" />
+    <Project Path="tests/WinEvo.Actions.Abstractions.Tests/WinEvo.Actions.Abstractions.Tests.csproj" />
     <Project Path="tests/WinEvo.Actions.Operations.Tests/WinEvo.Actions.Operations.Tests.csproj" />
     <Project Path="tests/WinEvo.Agent.Core.Tests/WinEvo.Agent.Core.Tests.csproj" />
     <Project Path="tests/WinEvo.Ipc.Tests/WinEvo.Ipc.Tests.csproj" />

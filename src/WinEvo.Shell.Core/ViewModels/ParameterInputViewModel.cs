@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WinEvo.ActionModel;
@@ -16,9 +17,9 @@ public abstract class ParameterInputViewModel : ObservableObject
     protected ParameterInputViewModel(Parameter parameter, string? language)
     {
         Parameter = parameter;
-        DisplayName = parameter.Name ?? parameter.Id;
-        DisplayDescription = parameter.Description;
-        _ = language; // Localization hook — per-parameter overrides resolved by the factory caller if needed.
+        var culture = language is null ? CultureInfo.InvariantCulture : CultureInfo.GetCultureInfo(language);
+        DisplayName = parameter.Name?.Resolve(culture) ?? parameter.Id;
+        DisplayDescription = parameter.Description?.Resolve(culture);
     }
 
     public Parameter Parameter { get; }

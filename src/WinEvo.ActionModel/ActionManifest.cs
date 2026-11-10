@@ -88,8 +88,8 @@ public abstract class Parameter
 {
     public required string Id { get; init; }
     public required string Type { get; init; }
-    public string? Name { get; init; }
-    public string? Description { get; init; }
+    public LocalizableText? Name { get; init; }
+    public LocalizableText? Description { get; init; }
     public bool Required { get; init; }
     public JsonElement? Default { get; init; }
 
