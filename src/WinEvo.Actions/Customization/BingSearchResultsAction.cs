@@ -18,7 +18,7 @@ public sealed class BingSearchResultsAction : ToggleActionDefinition
             new ActionDescriptor
             {
                 Id = "customization.bing-search-results",
-                Category = "customization",
+                Category = Categories.Customization,
                 Name = ActionText.For("BingSearchResults_Name"),
                 Description = ActionText.For("BingSearchResults_Description"),
                 Tags = ["privacy", "search", "start-menu"],

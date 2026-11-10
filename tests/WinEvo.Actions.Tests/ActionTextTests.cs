@@ -51,6 +51,7 @@ public class ActionTextTests
         {
             var descriptor = action.Descriptor;
             yield return descriptor.Name;
+            yield return descriptor.Category.Name;
             if (descriptor.Description is not null)
                 yield return descriptor.Description;
 

@@ -198,7 +198,7 @@ public class ActionExecutorTests
     private static ActionDescriptor Descriptor(params Parameter[] parameters) => new()
     {
         Id = "test.exec",
-        Category = "test",
+        Category = new ActionCategory { Id = "test", Name = LocalizableText.Literal("Test") },
         Name = LocalizableText.Literal("Exec"),
         Parameters = parameters,
     };

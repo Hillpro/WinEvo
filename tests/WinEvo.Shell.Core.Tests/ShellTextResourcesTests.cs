@@ -18,8 +18,8 @@ public partial class ShellTextResourcesTests
 {
     private static readonly CultureInfo s_french = CultureInfo.GetCultureInfo("fr");
 
-    /// <summary>Keys built at run time from an id (<c>Category_storage</c>), so no source literal names them.</summary>
-    private static readonly string[] s_keyPrefixesBuiltAtRunTime = ["Category_", "DriveType_"];
+    /// <summary>Keys built at run time from an enum value (<c>DriveType_Fixed</c>), so no source literal names them.</summary>
+    private static readonly string[] s_keyPrefixesBuiltAtRunTime = ["DriveType_"];
 
     private static readonly ResourceManager s_viewModelStrings = new(
         "WinEvo.Shell.Core.Strings",

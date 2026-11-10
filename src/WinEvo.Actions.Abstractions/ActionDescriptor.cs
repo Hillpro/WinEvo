@@ -11,7 +11,7 @@ public sealed record ActionDescriptor
     /// <summary>Stable identifier, <c>category.action-name</c>. Sent over IPC to select the action to run.</summary>
     public required string Id { get; init; }
 
-    public required string Category { get; init; }
+    public required ActionCategory Category { get; init; }
     public required LocalizableText Name { get; init; }
     public LocalizableText? Description { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];

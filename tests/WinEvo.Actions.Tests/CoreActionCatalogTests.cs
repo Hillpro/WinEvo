@@ -16,7 +16,18 @@ public partial class CoreActionCatalogTests
     public void Every_action_id_starts_with_its_category()
     {
         Assert.All(_catalog.Actions, action =>
-            Assert.StartsWith(action.Descriptor.Category + ".", action.Descriptor.Id, StringComparison.Ordinal));
+            Assert.StartsWith(action.Descriptor.Category.Id + ".", action.Descriptor.Id, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Each_category_id_has_a_single_name()
+    {
+        // Two category objects sharing an id would show one group under two names.
+        var categoriesById = _catalog.Actions
+            .Select(action => action.Descriptor.Category)
+            .GroupBy(category => category.Id, StringComparer.Ordinal);
+
+        Assert.All(categoriesById, sameId => Assert.Single(sameId.Distinct()));
     }
 
     [Fact]

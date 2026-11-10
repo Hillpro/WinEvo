@@ -31,7 +31,7 @@ public sealed class WipeFreeSpaceAction : ActionDefinition
     public override ActionDescriptor Descriptor { get; } = new()
     {
         Id = "storage.wipe-free-space",
-        Category = "storage",
+        Category = Categories.Storage,
         Name = ActionText.For("WipeFreeSpace_Name"),
         Description = ActionText.For("WipeFreeSpace_Description"),
         Author = "Hillpro",
@@ -81,7 +81,7 @@ public sealed class BingSearchResultsAction : ToggleActionDefinition
             new ActionDescriptor
             {
                 Id = "customization.bing-search-results",
-                Category = "customization",
+                Category = Categories.Customization,
                 Name = ActionText.For("BingSearchResults_Name"),
                 Description = ActionText.For("BingSearchResults_Description"),
             },
@@ -116,7 +116,7 @@ The full version is [BingSearchResultsAction.cs](../src/WinEvo.Actions/Customiza
 | Field | Meaning |
 |---|---|
 | `Id` | `category.kebab-case-name`. Globally unique and stable: it is what the Shell sends to the agent, and later the key for history and undo. Never change it once released. |
-| `Category` | Lowercase word the Shell groups by. The id must start with it. |
+| `Category` | One of the entries in [Categories.cs](../src/WinEvo.Actions/Categories.cs). A category carries its id, which the action id must start with, and its localized name. To add one, add a property there and its name to both `.resx` files. |
 | `Name`, `Description` | Localized text shown in the list and the detail pane. |
 | `Elevation` | `Required` makes the Shell obtain an elevated agent through UAC before running. The agent refuses to run such an action when it is not elevated, whatever the caller says. `Optional` is declared but not acted on yet. |
 | `Warnings` | See below. |

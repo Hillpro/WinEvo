@@ -60,12 +60,6 @@
   <data name="Agent_ConnectedElevated" xml:space="preserve">
     <value>Connecté · agent {0} (droits administrateur) · {1} en cours</value>
   </data>
-  <data name="Category_customization" xml:space="preserve">
-    <value>Personnalisation</value>
-  </data>
-  <data name="Category_storage" xml:space="preserve">
-    <value>Stockage</value>
-  </data>
   <data name="Drive_Label" xml:space="preserve">
     <value>{0}  {1}  ({2:0.#} Go libres)</value>
   </data>

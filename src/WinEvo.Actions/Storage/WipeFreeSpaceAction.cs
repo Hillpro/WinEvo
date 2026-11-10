@@ -14,7 +14,7 @@ public sealed class WipeFreeSpaceAction : ActionDefinition
     public override ActionDescriptor Descriptor { get; } = new()
     {
         Id = "storage.wipe-free-space",
-        Category = "storage",
+        Category = Categories.Storage,
         Name = ActionText.For("WipeFreeSpace_Name"),
         Description = ActionText.For("WipeFreeSpace_Description"),
         Tags = ["privacy", "disk"],

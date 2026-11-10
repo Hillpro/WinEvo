@@ -7,27 +7,17 @@ namespace WinEvo.Shell.Core.Tests;
 public class ActionItemViewModelTests
 {
     [Fact]
-    public void Category_is_shown_by_its_name_in_the_users_language()
+    public void Category_is_shown_by_the_name_it_carries()
     {
-        var english = new ActionItemViewModel(Descriptor("storage"), CultureInfo.GetCultureInfo("en"));
-        var french = new ActionItemViewModel(Descriptor("storage"), CultureInfo.GetCultureInfo("fr-FR"));
+        var item = new ActionItemViewModel(Descriptor(), CultureInfo.InvariantCulture);
 
-        Assert.Equal("Storage", english.DisplayCategory);
-        Assert.Equal("Stockage", french.DisplayCategory);
-    }
-
-    [Fact]
-    public void Category_without_a_name_is_shown_by_its_id()
-    {
-        var item = new ActionItemViewModel(Descriptor("networking"), CultureInfo.GetCultureInfo("fr"));
-
-        Assert.Equal("networking", item.DisplayCategory);
+        Assert.Equal("Storage", item.DisplayCategory);
     }
 
     [Fact]
     public void Category_id_stays_available_for_grouping()
     {
-        var item = new ActionItemViewModel(Descriptor("storage"), CultureInfo.GetCultureInfo("fr"));
+        var item = new ActionItemViewModel(Descriptor(), CultureInfo.InvariantCulture);
 
         Assert.Equal("storage", item.Category);
     }
@@ -35,16 +25,16 @@ public class ActionItemViewModelTests
     [Fact]
     public void Elevation_need_is_taken_from_the_descriptor()
     {
-        var elevated = Descriptor("storage") with { Elevation = ElevationRequirement.Required };
+        var elevated = Descriptor() with { Elevation = ElevationRequirement.Required };
 
         Assert.True(new ActionItemViewModel(elevated, CultureInfo.InvariantCulture).RequiresElevation);
-        Assert.False(new ActionItemViewModel(Descriptor("storage"), CultureInfo.InvariantCulture).RequiresElevation);
+        Assert.False(new ActionItemViewModel(Descriptor(), CultureInfo.InvariantCulture).RequiresElevation);
     }
 
-    private static ActionDescriptor Descriptor(string category) => new()
+    private static ActionDescriptor Descriptor() => new()
     {
-        Id = $"{category}.test",
-        Category = category,
+        Id = "storage.test",
+        Category = new ActionCategory { Id = "storage", Name = LocalizableText.Literal("Storage") },
         Name = LocalizableText.Literal("Test"),
     };
 }

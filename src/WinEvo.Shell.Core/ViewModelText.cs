@@ -5,7 +5,7 @@ namespace WinEvo.Shell.Core;
 
 /// <summary>
 /// Text produced by the view models and services (status lines, the footer,
-/// drive labels, category names), read from <c>Strings.resx</c> and its
+/// drive labels), read from <c>Strings.resx</c> and its
 /// <c>Strings.&lt;language&gt;.resx</c> translations.
 /// </summary>
 internal static class ViewModelText

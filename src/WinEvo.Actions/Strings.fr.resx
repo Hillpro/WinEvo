@@ -39,4 +39,10 @@
   <data name="WipeFreeSpace_DeletedFilesOnlyNote" xml:space="preserve">
     <value>Vos fichiers ne sont pas touchés. Seuls les fichiers déjà supprimés sont effacés pour de bon, afin qu'ils ne puissent plus être récupérés.</value>
   </data>
+  <data name="Category_Customization" xml:space="preserve">
+    <value>Personnalisation</value>
+  </data>
+  <data name="Category_Storage" xml:space="preserve">
+    <value>Stockage</value>
+  </data>
 </root>

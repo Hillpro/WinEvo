@@ -60,12 +60,6 @@
   <data name="Agent_ConnectedElevated" xml:space="preserve">
     <value>Connected · agent {0} (elevated) · {1} running</value>
   </data>
-  <data name="Category_customization" xml:space="preserve">
-    <value>Customization</value>
-  </data>
-  <data name="Category_storage" xml:space="preserve">
-    <value>Storage</value>
-  </data>
   <data name="Drive_Label" xml:space="preserve">
     <value>{0}  {1}  ({2:0.#} GB free)</value>
   </data>

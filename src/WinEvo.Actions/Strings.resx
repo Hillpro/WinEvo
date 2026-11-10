@@ -39,4 +39,10 @@
   <data name="WipeFreeSpace_DeletedFilesOnlyNote" xml:space="preserve">
     <value>Your files stay safe. This only clears what you've already deleted so it can't be recovered later.</value>
   </data>
+  <data name="Category_Customization" xml:space="preserve">
+    <value>Customization</value>
+  </data>
+  <data name="Category_Storage" xml:space="preserve">
+    <value>Storage</value>
+  </data>
 </root>

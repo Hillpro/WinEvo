@@ -23,7 +23,7 @@ public class ToggleActionDefinitionTests
         var action = new FakeToggle(currentlyOn: null);
 
         Assert.Equal("test.toggle", action.Descriptor.Id);
-        Assert.Equal("customization", action.Descriptor.Category);
+        Assert.Equal("customization", action.Descriptor.Category.Id);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class ToggleActionDefinitionTests
         public static ActionDescriptor Identity { get; } = new()
         {
             Id = "test.toggle",
-            Category = "customization",
+            Category = new ActionCategory { Id = "customization", Name = LocalizableText.Literal("Customization") },
             Name = LocalizableText.Literal("Test toggle"),
         };
 
