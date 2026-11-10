@@ -78,8 +78,10 @@ Agent diagnostic log: `%LOCALAPPDATA%\WinEvo\agent.log` (startup events, pipe-se
 ```bash
 # Portable, self-contained: bundles .NET + WinAppSDK runtimes
 # Output: src/WinEvo.Shell/bin/Release/net10.0-windows10.0.22000.0/win-x64/publish/
-dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64
+dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64 -p:SelfContained=true -p:RuntimeIdentifier=win-x64
 ```
+
+The two `-p:` properties after the profile are required: they are what makes the agent, not only the Shell, carry its own .NET runtime. Without them the publish stops with an error instead of producing a zip that only works where .NET is installed.
 
 This uses the `Portable-win-x64` publish profile in [src/WinEvo.Shell/Properties/PublishProfiles/](src/WinEvo.Shell/Properties/PublishProfiles/), and the output runs on a clean Windows 11 22000+ machine without any prerequisite installs.
 

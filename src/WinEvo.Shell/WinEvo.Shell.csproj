@@ -18,6 +18,16 @@
          docs/distribution.md for why. -->
     <WindowsPackageType>None</WindowsPackageType>
 
+    <!-- Despite its name, this does not produce an MSIX (WindowsPackageType
+         is None). It is what makes `dotnet publish` carry WinEvo.pri into
+         the publish folder. That file holds the compiled XAML and every
+         Resources.resw string; without it the published WinEvo.exe dies at
+         startup with "XamlParseException: XAML parsing failed", while F5 and
+         `dotnet run` keep working because the build output does have it.
+         Removing this line with the rest of the MSIX setup broke the
+         portable zip once already. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+
     <!-- Bundle the WinAppSDK runtime when SelfContained=true. Set inside
          the csproj (not on the CLI) so the property does NOT propagate to
          ProjectReferences. Shell.Core also references WinAppSDK, and
@@ -50,9 +60,11 @@
          running them is the agent's job. -->
     <ProjectReference Include="..\WinEvo.Actions\WinEvo.Actions.csproj" />
 
-    <!-- Build-order-only reference so the agent exe is ready before we try to copy it. -->
+    <!-- Not a code reference: it makes the agent build first, and reports
+         where its output landed (item AgentBuildOutput) so it can be copied. -->
     <ProjectReference Include="..\WinEvo.Agent\WinEvo.Agent.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>AgentBuildOutput</OutputItemType>
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
       <Private>false</Private>
     </ProjectReference>
@@ -60,47 +72,48 @@
 
   <!-- Bring the Agent into the Shell's output under an agent\ subfolder. The
        two targets below cover both output paths: bin\ (dotnet build / run)
-       and publish\ (dotnet publish). The subfolder layout dodges NETSDK1152
-       — the Agent and the Shell both reference Actions / Ipc /
-       Contracts, so a flat-merge collides on every shared transitive
-       dependency.
+       and publish\ (dotnet publish). The subfolder layout dodges NETSDK1152:
+       the Agent and the Shell both reference Actions / Ipc / Contracts, so a
+       flat merge collides on every shared transitive dependency.
 
-       _AgentBinBase is the Agent project's base output dir without RID.
-       _ResolveAgentOutputDir resolves AgentOutputDir to either the
-       RID-specific subfolder (publish -r) or the RID-less fallback
-       (default build). DependsOnTargets="ResolveProjectReferences" makes
-       sure the Agent has actually built before we look for its files. -->
-  <PropertyGroup>
-    <_AgentBinBase>$(MSBuildProjectDirectory)\..\WinEvo.Agent\bin\$(Configuration)\net10.0-windows10.0.22000.0\</_AgentBinBase>
-  </PropertyGroup>
-
+       AgentOutputDir is the folder the Agent was built into by this very
+       build, taken from the project reference. It is never derived from the
+       runtime identifier: a win-x64\ folder left behind by an older publish
+       would otherwise be picked up and shipped as if it were current. -->
   <Target Name="_ResolveAgentOutputDir" DependsOnTargets="ResolveProjectReferences">
     <PropertyGroup>
-      <AgentOutputDir Condition="'$(RuntimeIdentifier)' != '' And Exists('$(_AgentBinBase)$(RuntimeIdentifier)\')">$(_AgentBinBase)$(RuntimeIdentifier)\</AgentOutputDir>
-      <AgentOutputDir Condition="'$(AgentOutputDir)' == ''">$(_AgentBinBase)</AgentOutputDir>
+      <AgentOutputDir>@(AgentBuildOutput->'%(RootDir)%(Directory)')</AgentOutputDir>
     </PropertyGroup>
+    <Error Condition="!Exists('$(AgentOutputDir)WinEvo.Agent.exe')"
+           Text="WinEvo.Agent.exe was not built (looked in '$(AgentOutputDir)'). The Shell cannot run actions without it." />
+    <ItemGroup>
+      <!-- Runtime-specific builds of the agent sit in subfolders of its
+           framework-dependent output; they are separate builds, not part of
+           this one. -->
+      <_AgentFiles Include="$(AgentOutputDir)**\*.*" Exclude="$(AgentOutputDir)win-*\**" />
+    </ItemGroup>
   </Target>
 
-  <!-- Post-build Copy → handles dotnet build and dotnet run. -->
+  <!-- Post-build Copy: handles dotnet build and dotnet run. -->
   <Target Name="CopyAgentBinaries" AfterTargets="Build" DependsOnTargets="_ResolveAgentOutputDir">
-    <ItemGroup>
-      <_AgentFiles Include="$(AgentOutputDir)**\*.*" />
-    </ItemGroup>
     <Copy SourceFiles="@(_AgentFiles)"
           DestinationFiles="@(_AgentFiles->'$(OutputPath)agent\%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true"
-          Condition="Exists('$(AgentOutputDir)')" />
+          SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- Post-publish Copy → handles unpackaged publish. -->
-  <Target Name="CopyAgentBinariesToPublish" AfterTargets="Publish" DependsOnTargets="_ResolveAgentOutputDir">
-    <ItemGroup>
-      <_AgentPublishFiles Include="$(AgentOutputDir)**\*.*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(_AgentPublishFiles)"
-          DestinationFiles="@(_AgentPublishFiles->'$(PublishDir)agent\%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true"
-          Condition="Exists('$(AgentOutputDir)') And '$(PublishDir)' != ''" />
+  <!-- Post-publish Copy: handles the portable publish. -->
+  <Target Name="CopyAgentBinariesToPublish" AfterTargets="Publish" DependsOnTargets="_ResolveAgentOutputDir"
+          Condition="'$(PublishDir)' != ''">
+    <!-- A self-contained Shell next to an agent that still needs .NET
+         installed starts fine and then fails on the first action, on any
+         machine without .NET. That happens when SelfContained and
+         RuntimeIdentifier come only from the publish profile: they then
+         apply to the Shell but not to the Agent. -->
+    <Error Condition="'$(SelfContained)' == 'true' And !Exists('$(AgentOutputDir)coreclr.dll')"
+           Text="The agent was built without its own .NET runtime, so the published app would only work where .NET is installed. Publish with: dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64 -p:SelfContained=true -p:RuntimeIdentifier=win-x64" />
+    <Copy SourceFiles="@(_AgentFiles)"
+          DestinationFiles="@(_AgentFiles->'$(PublishDir)agent\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
