@@ -4,27 +4,28 @@ using System.Security.Principal;
 using System.Text.Json;
 using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
-using WinEvo.Actions.Operations;
 using WinEvo.Ipc;
 
 namespace WinEvo.Agent.Core;
 
 /// <summary>
 /// Agent-side loop: hosts a named-pipe server, accepts one client at a time
-/// (the Shell), and dispatches inbound <see cref="PipeMessage"/> requests to
-/// the <see cref="ActionExecutor"/>. When the pipe closes, the agent exits.
+/// (the Shell), and serves inbound <see cref="PipeMessage"/> requests against
+/// the actions in its catalog. When the pipe closes, the agent exits.
 /// </summary>
 public sealed class AgentHost
 {
     private readonly string _pipeName;
-    private readonly IOperationParser _parser;
-    private readonly ActionExecutor _executor;
+    private readonly IActionCatalog _catalog;
 
-    public AgentHost(string pipeName, IOperationParser? parser = null)
+    /// <param name="catalog">
+    /// The only actions this agent will run. Callers name an action by id;
+    /// they cannot supply one.
+    /// </param>
+    public AgentHost(string pipeName, IActionCatalog catalog)
     {
         _pipeName = pipeName;
-        _parser = parser ?? new OperationParser();
-        _executor = new ActionExecutor(_parser);
+        _catalog = catalog;
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -114,10 +115,10 @@ public sealed class AgentHost
         {
             RequestId = hs.RequestId,
             AgentVersion = typeof(AgentHost).Assembly.GetName().Version?.ToString() ?? "0.0.0",
-            AgentProtocolVersion = 1,
-            SupportedOperations = _parser.SupportedIds.ToArray(),
+            AgentProtocolVersion = PipeProtocol.Version,
         },
         ExecuteRequest exec => await HandleExecuteAsync(exec, ct).ConfigureAwait(false),
+        ReadStateRequest read => await HandleReadStateAsync(read, ct).ConfigureAwait(false),
         _ => new ErrorResponse { RequestId = request.RequestId, Message = "unsupported message type" },
     };
 
@@ -204,15 +205,26 @@ public sealed class AgentHost
 
     private async Task<PipeMessage> HandleExecuteAsync(ExecuteRequest request, CancellationToken ct)
     {
-        var manifest = ManifestLoader.Parse(request.Manifest);
+        var action = _catalog.Find(request.ActionId);
+        if (action is null)
+        {
+            AgentLog.Write($"refused '{request.ActionId}': no such action in the catalog");
+            return new ExecutionResponse
+            {
+                RequestId = request.RequestId,
+                Success = false,
+                Message = $"unknown action '{request.ActionId}'",
+            };
+        }
 
-        // Authorization boundary: refuse 'elevation: required' manifests when
+        // Authorization boundary: refuse actions that require elevation when
         // the agent itself isn't elevated. The Shell is expected to promote the
         // broker via UAC before sending these; this check is the authoritative
-        // gate against a buggy or hostile caller bypassing that flow.
-        if (manifest.Requirements.Elevation == ElevationRequirement.Required && !IsElevated())
+        // gate against a buggy or hostile caller bypassing that flow. The
+        // requirement is read from the agent's own catalog, never from the caller.
+        if (action.Descriptor.Elevation == ElevationRequirement.Required && !IsElevated())
         {
-            AgentLog.Write($"refused '{manifest.Id}': manifest requires elevation, agent is not elevated");
+            AgentLog.Write($"refused '{request.ActionId}': action requires elevation, agent is not elevated");
             return new ExecutionResponse
             {
                 RequestId = request.RequestId,
@@ -225,7 +237,21 @@ public sealed class AgentHost
         foreach (var (k, v) in request.Parameters)
             rawParams[k] = JsonSerializer.SerializeToElement(v);
 
-        var bound = ActionExecutor.BindParameters(manifest, rawParams);
-        return await _executor.ExecuteAsync(manifest, bound, request.RequestId, ct).ConfigureAwait(false);
+        var bound = ActionExecutor.BindParameters(action.Descriptor, rawParams);
+        return await ActionExecutor.ExecuteAsync(action, bound, request.RequestId, ct).ConfigureAwait(false);
+    }
+
+    private async Task<PipeMessage> HandleReadStateAsync(ReadStateRequest request, CancellationToken ct)
+    {
+        var action = _catalog.Find(request.ActionId);
+        if (action is null)
+            return new ErrorResponse { RequestId = request.RequestId, Message = $"unknown action '{request.ActionId}'" };
+
+        var state = await action.ReadStateAsync(ct).ConfigureAwait(false);
+        return new StateResponse
+        {
+            RequestId = request.RequestId,
+            Values = state.ToDictionary(entry => entry.Key, entry => JsonSerializer.SerializeToNode(entry.Value)),
+        };
     }
 }

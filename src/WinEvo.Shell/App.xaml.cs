@@ -62,8 +62,7 @@ public partial class App : Application
         // construction time
         var confirmation = new ConfirmationDialogService(() => _window?.Content.XamlRoot);
 
-        var stateLoader = new AgentParameterStateLoader(_agentLauncher);
-        var parameterFactory = new ParameterInputFactory(new SystemDriveProvider(), stateLoader, dispatcherQueue);
+        var parameterFactory = new ParameterInputFactory(new SystemDriveProvider());
 
         // TODO: detect system language / user preference instead of hard-coding English.
         var viewModel = new MainViewModel(

@@ -23,6 +23,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     private readonly DispatcherQueue _dispatcher;
     private readonly IConfirmationService _confirmation;
     private readonly StringBundle _strings;
+    private readonly CancellationTokenSource _liveStateRead = new();
 
     public ActionDetailViewModel(
         ActionItemViewModel item,
@@ -48,6 +49,8 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
             InteractionMode.Toggle => new ToggleInteractionController(this),
             _ => new ButtonInteractionController(this),
         };
+
+        _ = ShowLiveStateAsync(_liveStateRead.Token);
     }
 
     public ActionItemViewModel Item { get; }
@@ -62,6 +65,10 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
 
     [ObservableProperty]
     public partial bool IsRunning { get; set; }
+
+    /// <summary>True while the agent is being asked what the system currently looks like.</summary>
+    [ObservableProperty]
+    public partial bool IsReadingLiveState { get; set; }
 
     [ObservableProperty]
     public partial string? Status { get; set; }
@@ -105,11 +112,9 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
 
             await _dispatcher.RunOnUiAsync(() => Status = "Running…").ConfigureAwait(false);
 
-            var manifestJson = JsonNode.Parse(Item.Manifest.RawJson)
-                ?? throw new InvalidOperationException("manifest RawJson is not valid JSON");
             var paramDict = Parameters.ToDictionary(p => p.Id, p => p.ToJsonValue());
 
-            var response = await client.ExecuteAsync(manifestJson, paramDict, ct).ConfigureAwait(false);
+            var response = await client.ExecuteAsync(Item.Id, paramDict, ct).ConfigureAwait(false);
 
             await _dispatcher.RunOnUiAsync(() =>
             {
@@ -122,7 +127,6 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
                 {
                     var ok = step.Success ? "OK" : "FAIL";
                     detail.AppendLine($"[{ok}] {step.Operation}"
-                        + (step.StepId is null ? "" : $" ({step.StepId})")
                         + (step.Message is null ? "" : $" — {step.Message}")
                         + (step.Error is null ? "" : $" — {step.Error}"));
                 }
@@ -190,15 +194,53 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     private bool CanExecute() => !IsRunning;
 
     /// <summary>
-    /// Releases the interaction controller and any parameter VMs that hold
-    /// disposable resources (e.g. a <see cref="BooleanParameterInputViewModel"/>
-    /// with an in-flight state probe). Called by <see cref="MainViewModel"/>
-    /// when the user picks a different action, and at window close.
+    /// Replaces each parameter's declared default with the value currently in
+    /// effect on the system, as reported by the agent. When the agent is not
+    /// reachable or the read fails, the defaults stay: they are the fallback,
+    /// not the expected path.
+    /// </summary>
+    private async Task ShowLiveStateAsync(CancellationToken ct)
+    {
+        var client = _agentLauncher.Client;
+        if (client is null || !client.IsConnected)
+            return;
+
+        await _dispatcher.RunOnUiAsync(() => IsReadingLiveState = true).ConfigureAwait(false);
+        try
+        {
+            var liveValues = await client.ReadStateAsync(Item.Id, ct).ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() =>
+            {
+                foreach (var parameter in Parameters)
+                {
+                    if (liveValues.TryGetValue(parameter.Id, out var liveValue) && liveValue is not null)
+                        parameter.ShowLiveValue(liveValue);
+                }
+            }).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The user moved on to another action before the read was sent.
+        }
+        catch (Exception ex)
+        {
+            ShellLog.WriteException($"could not read the live state of '{Item.Id}'", ex);
+        }
+        finally
+        {
+            await _dispatcher.RunOnUiAsync(() => IsReadingLiveState = false).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Abandons a live-state read that has not been sent yet and releases the
+    /// interaction controller. Called by <see cref="MainViewModel"/> when the
+    /// user picks a different action, and at window close.
     /// </summary>
     public void Dispose()
     {
+        _liveStateRead.Cancel();
+        _liveStateRead.Dispose();
         (Interaction as IDisposable)?.Dispose();
-        foreach (var p in Parameters)
-            (p as IDisposable)?.Dispose();
     }
 }

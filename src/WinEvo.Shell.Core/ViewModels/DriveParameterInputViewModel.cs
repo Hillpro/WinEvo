@@ -34,4 +34,11 @@ public sealed partial class DriveParameterInputViewModel : ParameterInputViewMod
 
     public override JsonNode? ToJsonValue()
         => SelectedDrive is null ? null : JsonValue.Create(SelectedDrive.Root);
+
+    public override void ShowLiveValue(JsonNode liveValue)
+    {
+        var liveRoot = liveValue.GetValue<string>();
+        SelectedDrive = DriveOptions.FirstOrDefault(drive => string.Equals(drive.Root, liveRoot, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"live value '{liveRoot}' of parameter '{Id}' is not an available drive");
+    }
 }

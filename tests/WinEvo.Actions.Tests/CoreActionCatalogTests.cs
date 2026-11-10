@@ -2,9 +2,9 @@ using System.Text.RegularExpressions;
 
 namespace WinEvo.Actions.Tests;
 
-public partial class ShippedActionCatalogTests
+public partial class CoreActionCatalogTests
 {
-    private readonly ShippedActionCatalog _catalog = new();
+    private readonly CoreActionCatalog _catalog = new();
 
     [Fact]
     public void Every_action_id_is_category_dot_name_in_kebab_case()
@@ -28,7 +28,7 @@ public partial class ShippedActionCatalogTests
     }
 
     [Fact]
-    public void Find_returns_each_shipped_action_by_id()
+    public void Find_returns_each_core_action_by_id()
     {
         Assert.All(_catalog.Actions, action => Assert.Same(action, _catalog.Find(action.Descriptor.Id)));
     }

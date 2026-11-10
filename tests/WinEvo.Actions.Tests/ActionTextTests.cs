@@ -18,7 +18,7 @@ public class ActionTextTests
 
     private static readonly ResourceManager s_strings = new(
         "WinEvo.Actions.Strings",
-        typeof(ShippedActionCatalog).Assembly);
+        typeof(CoreActionCatalog).Assembly);
 
     [Fact]
     public void Every_action_text_resolves_in_english()
@@ -47,7 +47,7 @@ public class ActionTextTests
 
     private static IEnumerable<LocalizableText> AllActionTexts()
     {
-        foreach (var action in new ShippedActionCatalog().Actions)
+        foreach (var action in new CoreActionCatalog().Actions)
         {
             var descriptor = action.Descriptor;
             yield return descriptor.Name;

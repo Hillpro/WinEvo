@@ -17,7 +17,7 @@
 
   "parameters": [
     {
-      "id": "bingSearchEnabled",
+      "id": "isOn",
       "type": "boolean",
       "name": "Show Bing results",
       "description": "When on, Windows search includes Bing web results. When off, only local results are shown.",
@@ -39,7 +39,7 @@
         "key":  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
         "value": "BingSearchEnabled",
         "type": "DWORD",
-        "data": "{{params.bingSearchEnabled}}"
+        "data": "{{params.isOn}}"
       },
       {
         "id": "set-cortana-consent",
@@ -47,7 +47,7 @@
         "key":  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
         "value": "CortanaConsent",
         "type": "DWORD",
-        "data": "{{params.bingSearchEnabled}}"
+        "data": "{{params.isOn}}"
       },
       {
         "id": "restart-searchui",
@@ -63,7 +63,7 @@
       "name": "Résultats Bing dans la recherche Windows",
       "description": "Active ou désactive l'affichage des résultats web Bing dans le menu Démarrer et la Recherche pour l'utilisateur courant.",
       "parameters": {
-        "bingSearchEnabled": {
+        "isOn": {
           "name": "Afficher les résultats Bing",
           "description": "Activé : la recherche Windows inclut les résultats web Bing. Désactivé : seuls les résultats locaux sont affichés."
         }

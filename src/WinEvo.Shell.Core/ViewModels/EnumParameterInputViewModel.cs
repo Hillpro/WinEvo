@@ -35,4 +35,12 @@ public sealed partial class EnumParameterInputViewModel : ParameterInputViewMode
 
     public override JsonNode? ToJsonValue()
         => string.IsNullOrEmpty(SelectedChoice) ? null : JsonValue.Create(SelectedChoice);
+
+    public override void ShowLiveValue(JsonNode liveValue)
+    {
+        var liveChoice = liveValue.GetValue<string>();
+        if (!Choices.Contains(liveChoice))
+            throw new InvalidOperationException($"live value '{liveChoice}' of parameter '{Id}' is not one of its choices");
+        SelectedChoice = liveChoice;
+    }
 }

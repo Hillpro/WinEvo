@@ -34,4 +34,6 @@ public sealed partial class IntegerParameterInputViewModel : ParameterInputViewM
 
     public override JsonNode? ToJsonValue()
         => HasValue ? JsonValue.Create((long)Value) : null;
+
+    public override void ShowLiveValue(JsonNode liveValue) => Value = liveValue.GetValue<long>();
 }

@@ -6,11 +6,11 @@ namespace WinEvo.Actions;
 /// The actions that ship with WinEvo. Adding an action = one new
 /// <see cref="ActionDefinition"/> subclass + one line in the list below.
 /// </summary>
-public sealed class ShippedActionCatalog : IActionCatalog
+public sealed class CoreActionCatalog : IActionCatalog
 {
     private readonly Dictionary<string, ActionDefinition> _actionsById;
 
-    public ShippedActionCatalog()
+    public CoreActionCatalog()
     {
         Actions =
         [

@@ -8,7 +8,7 @@ namespace WinEvo.Actions.Tests;
 /// Pins what the Shell and the agent rely on for each shipped action: its
 /// inputs, its elevation need and the warnings the user must confirm.
 /// </summary>
-public class ShippedActionsTests
+public class CoreActionsTests
 {
     [Fact]
     public void Wipe_free_space_asks_for_a_fixed_or_removable_drive()

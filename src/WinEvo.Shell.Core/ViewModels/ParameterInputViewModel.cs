@@ -37,4 +37,11 @@ public abstract class ParameterInputViewModel : ObservableObject
 
     /// <summary>Serialise the current input to the IPC wire format.</summary>
     public abstract JsonNode? ToJsonValue();
+
+    /// <summary>
+    /// Displays the value currently in effect on the system, as read by the
+    /// agent, in place of the declared default. This is not user input: it
+    /// must not trigger anything a user edit would.
+    /// </summary>
+    public abstract void ShowLiveValue(JsonNode liveValue);
 }

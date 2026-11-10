@@ -29,4 +29,6 @@ public sealed partial class StringParameterInputViewModel : ParameterInputViewMo
 
     public override JsonNode? ToJsonValue()
         => string.IsNullOrEmpty(Value) ? null : JsonValue.Create(Value);
+
+    public override void ShowLiveValue(JsonNode liveValue) => Value = liveValue.GetValue<string>();
 }

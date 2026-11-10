@@ -13,6 +13,11 @@ namespace WinEvo.Shell.Core.Services;
 public sealed class PipeAgentClient : IAgentClient
 {
     private readonly string _pipeName;
+
+    // The pipe carries one request and its response at a time; a second
+    // caller writing or reading in between would get the wrong frame.
+    private readonly SemaphoreSlim _oneRequestAtATime = new(1, 1);
+
     private NamedPipeClientStream? _stream;
 
     public PipeAgentClient(string pipeName)
@@ -65,14 +70,14 @@ public sealed class PipeAgentClient : IAgentClient
     }
 
     public async Task<ExecutionResponse> ExecuteAsync(
-        JsonNode manifest,
+        string actionId,
         IReadOnlyDictionary<string, JsonNode?> parameters,
         CancellationToken ct)
     {
         var request = new ExecuteRequest
         {
             RequestId = Guid.NewGuid().ToString("N"),
-            Manifest = manifest,
+            ActionId = actionId,
             Parameters = parameters,
         };
         var response = await SendAsync(request, ct).ConfigureAwait(false);
@@ -84,17 +89,47 @@ public sealed class PipeAgentClient : IAgentClient
         };
     }
 
+    public async Task<IReadOnlyDictionary<string, JsonNode?>> ReadStateAsync(string actionId, CancellationToken ct)
+    {
+        var request = new ReadStateRequest
+        {
+            RequestId = Guid.NewGuid().ToString("N"),
+            ActionId = actionId,
+        };
+        var response = await SendAsync(request, ct).ConfigureAwait(false);
+        return response switch
+        {
+            StateResponse ok => ok.Values,
+            ErrorResponse err => throw new InvalidOperationException($"read state failed: {err.Message}"),
+            _ => throw new InvalidOperationException($"unexpected read-state response"),
+        };
+    }
+
+    /// <summary>
+    /// Sends one request and returns its response. <paramref name="ct"/> only
+    /// cancels the wait for the pipe to be free: once the request is written
+    /// its response is always read, because an unread response would be
+    /// handed to the next caller as if it were theirs.
+    /// </summary>
     private async Task<PipeMessage> SendAsync(PipeMessage request, CancellationToken ct)
     {
-        if (_stream is null || !_stream.IsConnected)
-            throw new InvalidOperationException("agent pipe not connected");
+        await _oneRequestAtATime.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (_stream is null || !_stream.IsConnected)
+                throw new InvalidOperationException("agent pipe not connected");
 
-        var bytes = PipeMessageSerializer.Serialize(request);
-        await PipeFraming.WriteFrameAsync(_stream, bytes, ct).ConfigureAwait(false);
+            var bytes = PipeMessageSerializer.Serialize(request);
+            await PipeFraming.WriteFrameAsync(_stream, bytes, CancellationToken.None).ConfigureAwait(false);
 
-        var frame = await PipeFraming.ReadFrameAsync(_stream, ct).ConfigureAwait(false)
-            ?? throw new InvalidOperationException("agent closed pipe");
-        return PipeMessageSerializer.Deserialize(frame);
+            var frame = await PipeFraming.ReadFrameAsync(_stream, CancellationToken.None).ConfigureAwait(false)
+                ?? throw new InvalidOperationException("agent closed pipe");
+            return PipeMessageSerializer.Deserialize(frame);
+        }
+        finally
+        {
+            _oneRequestAtATime.Release();
+        }
     }
 
     public async ValueTask DisposeAsync()

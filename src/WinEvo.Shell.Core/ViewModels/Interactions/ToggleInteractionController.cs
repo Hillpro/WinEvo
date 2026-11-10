@@ -6,14 +6,14 @@ namespace WinEvo.Shell.Core.ViewModels.Interactions;
 /// <summary>
 /// Stateful on/off mode. Binds a <c>ToggleSwitch</c> to the action's single
 /// boolean parameter and fires <see cref="ActionDetailViewModel.ExecuteCommand"/>
-/// whenever the user flips it. Hydration of the initial value happens on the
-/// parameter VM itself via <see cref="Services.IParameterStateLoader"/>; the
-/// controller only forwards <see cref="IsLoadingState"/> for the UI and gates
-/// <see cref="IsInteractive"/> off both that and the action's running state.
+/// whenever the user flips it. The switch's initial position is the live
+/// system state, which <see cref="ActionDetailViewModel"/> reads from the
+/// agent; the controller keeps the switch disabled until that read is over
+/// and while the action runs.
 /// Subscribes to <see cref="BooleanParameterInputViewModel.UserChangedValue"/>
-/// (not generic <c>PropertyChanged</c>) so hydration writes do NOT trigger an
-/// execute — the event is raised only when the public setter is hit, i.e. by
-/// XAML's two-way binding.
+/// (not generic <c>PropertyChanged</c>) so showing the live state does NOT
+/// trigger an execute — the event is raised only when the public setter is
+/// hit, i.e. by XAML's two-way binding.
 /// </summary>
 public sealed class ToggleInteractionController : InteractionController, IDisposable
 {
@@ -38,7 +38,7 @@ public sealed class ToggleInteractionController : InteractionController, IDispos
     }
 
     /// <summary>True while the initial-state read is in flight.</summary>
-    public bool IsLoadingState => _toggleParameter.IsLoadingState;
+    public bool IsLoadingState => Detail.IsReadingLiveState;
 
     /// <summary>True when the toggle should accept user input: not running, not loading.</summary>
     public bool IsInteractive => !Detail.IsRunning && !IsLoadingState;
@@ -52,22 +52,22 @@ public sealed class ToggleInteractionController : InteractionController, IDispos
 
     private void OnParameterPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        switch (e.PropertyName)
-        {
-            case nameof(BooleanParameterInputViewModel.Value):
-                OnPropertyChanged(nameof(IsOn));
-                break;
-            case nameof(BooleanParameterInputViewModel.IsLoadingState):
-                OnPropertyChanged(nameof(IsLoadingState));
-                OnPropertyChanged(nameof(IsInteractive));
-                break;
-        }
+        if (e.PropertyName == nameof(BooleanParameterInputViewModel.Value))
+            OnPropertyChanged(nameof(IsOn));
     }
 
     private void OnDetailPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ActionDetailViewModel.IsRunning))
-            OnPropertyChanged(nameof(IsInteractive));
+        switch (e.PropertyName)
+        {
+            case nameof(ActionDetailViewModel.IsRunning):
+                OnPropertyChanged(nameof(IsInteractive));
+                break;
+            case nameof(ActionDetailViewModel.IsReadingLiveState):
+                OnPropertyChanged(nameof(IsLoadingState));
+                OnPropertyChanged(nameof(IsInteractive));
+                break;
+        }
     }
 
     public void Dispose()

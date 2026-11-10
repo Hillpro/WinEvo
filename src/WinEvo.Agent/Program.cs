@@ -1,4 +1,5 @@
 using System.Security.Principal;
+using WinEvo.Actions;
 using WinEvo.Agent.Core;
 using WinEvo.Ipc;
 
@@ -50,7 +51,7 @@ internal static class Program
 
     private static async Task<int> RunBrokerAsync(CancellationToken ct)
     {
-        var host = new AgentHost(PipeNames.UserBroker);
+        var host = new AgentHost(PipeNames.UserBroker, new CoreActionCatalog());
         try
         {
             await host.RunAsync(ct).ConfigureAwait(false);

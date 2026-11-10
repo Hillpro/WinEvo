@@ -35,7 +35,7 @@ public class ShippedManifestsTests
         Assert.Equal(3, manifest.Execution.Steps.Count);
 
         var p = Assert.IsType<BooleanParameter>(Assert.Single(manifest.Parameters));
-        Assert.Equal("bingSearchEnabled", p.Id);
+        Assert.Equal("isOn", p.Id);
         Assert.True(p.Default!.Value.GetBoolean());
 
         var state = Assert.IsType<ParameterStateProbe>(p.State);
