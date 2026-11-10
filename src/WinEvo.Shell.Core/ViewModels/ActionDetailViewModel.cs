@@ -1,9 +1,9 @@
 using System.Collections.ObjectModel;
-using System.Text.Json.Nodes;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels.Interactions;
 
@@ -22,36 +22,37 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     private readonly AgentLauncher _agentLauncher;
     private readonly DispatcherQueue _dispatcher;
     private readonly IConfirmationService _confirmation;
-    private readonly StringBundle _strings;
+    private readonly CancellationTokenSource _liveStateRead = new();
+    private bool _disposed;
 
     public ActionDetailViewModel(
         ActionItemViewModel item,
-        string? language,
+        CultureInfo culture,
         AgentLauncher agentLauncher,
         DispatcherQueue dispatcher,
         IConfirmationService confirmation,
-        StringBundle strings,
         IParameterInputFactory parameterFactory)
     {
         _agentLauncher = agentLauncher;
         _dispatcher = dispatcher;
         _confirmation = confirmation;
-        _strings = strings;
         Item = item;
-        Language = language;
+        Culture = culture;
 
-        foreach (var p in item.Manifest.Parameters)
-            Parameters.Add(parameterFactory.Create(p, language));
+        foreach (var p in item.Descriptor.Parameters)
+            Parameters.Add(parameterFactory.Create(p, culture));
 
-        Interaction = item.Manifest.Interaction switch
+        Interaction = item.Descriptor.Interaction switch
         {
             InteractionMode.Toggle => new ToggleInteractionController(this),
             _ => new ButtonInteractionController(this),
         };
+
+        _ = ShowLiveStateAsync(_liveStateRead.Token);
     }
 
     public ActionItemViewModel Item { get; }
-    public string? Language { get; }
+    public CultureInfo Culture { get; }
 
     public ObservableCollection<ParameterInputViewModel> Parameters { get; } = new();
 
@@ -62,6 +63,10 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
 
     [ObservableProperty]
     public partial bool IsRunning { get; set; }
+
+    /// <summary>True while the agent is being asked what the system currently looks like.</summary>
+    [ObservableProperty]
+    public partial bool IsReadingLiveState { get; set; }
 
     [ObservableProperty]
     public partial string? Status { get; set; }
@@ -77,7 +82,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
             .ToList();
         if (missingRequired.Count > 0)
         {
-            Status = $"Missing required parameter(s): {string.Join(", ", missingRequired.Select(p => p.DisplayName))}";
+            Status = Text("Status_MissingParameters", string.Join(", ", missingRequired.Select(p => p.DisplayName)));
             return;
         }
 
@@ -87,14 +92,16 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
 
         try
         {
-            var warnings = WarningAggregator.Aggregate(Item.Manifest.Warnings, _strings, Language);
+            var warnings = Item.Descriptor.Warnings
+                .Select(warning => new ResolvedWarning(warning.Severity, warning.Message.Resolve(Culture)))
+                .ToList();
             if (warnings.Count > 0)
             {
                 var request = new ConfirmationRequest(Item.DisplayName, warnings);
                 var accepted = await _confirmation.RequestAsync(request, ct).ConfigureAwait(false);
                 if (!accepted)
                 {
-                    await _dispatcher.RunOnUiAsync(() => Status = "Cancelled by user.").ConfigureAwait(false);
+                    await _dispatcher.RunOnUiAsync(() => Status = Text("Status_CancelledByUser")).ConfigureAwait(false);
                     return;
                 }
             }
@@ -103,26 +110,25 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
             if (client is null)
                 return;
 
-            await _dispatcher.RunOnUiAsync(() => Status = "Running…").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => Status = Text("Status_Running")).ConfigureAwait(false);
 
-            var manifestJson = JsonNode.Parse(Item.Manifest.RawJson)
-                ?? throw new InvalidOperationException("manifest RawJson is not valid JSON");
             var paramDict = Parameters.ToDictionary(p => p.Id, p => p.ToJsonValue());
 
-            var response = await client.ExecuteAsync(manifestJson, paramDict, ct).ConfigureAwait(false);
+            var response = await client.ExecuteAsync(Item.Id, paramDict, ct).ConfigureAwait(false);
 
             await _dispatcher.RunOnUiAsync(() =>
             {
-                Status = response.Success
-                    ? $"Success — {response.Message}"
-                    : $"Failed — {response.Message}";
+                Status = ExecutionOutcomeText.For(response, Culture);
 
+                // The agent's own account of the run. It is diagnostic output
+                // and stays in English, like the agent's log.
                 var detail = new System.Text.StringBuilder();
+                if (response.Message is not null)
+                    detail.AppendLine(response.Message);
                 foreach (var step in response.StepResults)
                 {
                     var ok = step.Success ? "OK" : "FAIL";
                     detail.AppendLine($"[{ok}] {step.Operation}"
-                        + (step.StepId is null ? "" : $" ({step.StepId})")
                         + (step.Message is null ? "" : $" — {step.Message}")
                         + (step.Error is null ? "" : $" — {step.Error}"));
                 }
@@ -135,7 +141,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
         {
             await _dispatcher.RunOnUiAsync(() =>
             {
-                Status = $"Error: {ex.Message}";
+                Status = Text("Status_Error", ex.Message);
                 ResultDetail = ex.ToString();
             }).ConfigureAwait(false);
         }
@@ -153,11 +159,11 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     /// </summary>
     private async Task<IAgentClient?> ResolveClientAsync(CancellationToken ct)
     {
-        var requiresElevation = Item.Manifest.Requirements.Elevation == ElevationRequirement.Required;
+        var requiresElevation = Item.RequiresElevation;
 
         if (requiresElevation && !_agentLauncher.IsElevated)
         {
-            await _dispatcher.RunOnUiAsync(() => Status = "Waiting for elevation…").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => Status = Text("Status_WaitingForElevation")).ConfigureAwait(false);
             try
             {
                 return await _agentLauncher.EnsureElevatedAsync(ct).ConfigureAwait(false);
@@ -168,10 +174,9 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
                 // launch with the same error, so say which one we believe it
                 // was rather than blaming the user for a prompt they may never
                 // have been shown.
-                var message = ex.Reason == ElevationFailureReason.DownloadMarkerPresent
-                    ? "Windows blocked the action because this copy was downloaded from the internet. "
-                      + "Right-click the downloaded .zip, open Properties, tick Unblock, then extract it again."
-                    : "Elevation was declined. Action not executed.";
+                var message = Text(ex.Reason == ElevationFailureReason.DownloadMarkerPresent
+                    ? "Status_BlockedDownload"
+                    : "Status_ElevationDeclined");
 
                 await _dispatcher.RunOnUiAsync(() => Status = message).ConfigureAwait(false);
                 return null;
@@ -181,7 +186,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
         var client = _agentLauncher.Client;
         if (client is null || !client.IsConnected)
         {
-            await _dispatcher.RunOnUiAsync(() => Status = "Agent not connected.").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => Status = Text("Status_AgentNotConnected")).ConfigureAwait(false);
             return null;
         }
         return client;
@@ -189,16 +194,73 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
 
     private bool CanExecute() => !IsRunning;
 
+    private string Text(string key, params object?[] arguments) => ViewModelText.Format(key, Culture, arguments);
+
     /// <summary>
-    /// Releases the interaction controller and any parameter VMs that hold
-    /// disposable resources (e.g. a <see cref="BooleanParameterInputViewModel"/>
-    /// with an in-flight state probe). Called by <see cref="MainViewModel"/>
-    /// when the user picks a different action, and at window close.
+    /// Replaces each parameter's declared default with the value currently in
+    /// effect on the system, as reported by the agent. When the agent is not
+    /// reachable or the read fails, the defaults stay: they are the fallback,
+    /// not the expected path.
+    /// </summary>
+    private async Task ShowLiveStateAsync(CancellationToken ct)
+    {
+        var client = _agentLauncher.Client;
+        if (client is null || !client.IsConnected)
+            return;
+
+        await _dispatcher.RunOnUiAsync(() => IsReadingLiveState = true).ConfigureAwait(false);
+        try
+        {
+            var liveValues = await client.ReadStateAsync(Item.Id, ct).ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() =>
+            {
+                foreach (var parameter in Parameters)
+                {
+                    if (!liveValues.TryGetValue(parameter.Id, out var liveValue) || liveValue is null)
+                        continue;
+
+                    // One input refusing its value (a drive that is no longer
+                    // mounted) must not leave the others on their defaults.
+                    try
+                    {
+                        parameter.ShowLiveValue(liveValue);
+                    }
+                    catch (Exception ex)
+                    {
+                        ShellLog.WriteException($"could not show the live value of '{Item.Id}' parameter '{parameter.Id}'", ex);
+                    }
+                }
+            }).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The user moved on to another action before the read was sent.
+        }
+        catch (Exception ex)
+        {
+            ShellLog.WriteException($"could not read the live state of '{Item.Id}'", ex);
+        }
+        finally
+        {
+            await _dispatcher.RunOnUiAsync(() => IsReadingLiveState = false).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Abandons a live-state read that has not been sent yet and releases the
+    /// interaction controller. Called by <see cref="MainViewModel"/> when the
+    /// user picks a different action, and at window close.
     /// </summary>
     public void Dispose()
     {
+        // Reached twice when the user picks another action while the window
+        // is closing: once from the close handler, once from the selection.
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        _liveStateRead.Cancel();
+        _liveStateRead.Dispose();
         (Interaction as IDisposable)?.Dispose();
-        foreach (var p in Parameters)
-            (p as IDisposable)?.Dispose();
     }
 }

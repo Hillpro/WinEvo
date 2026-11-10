@@ -1,135 +1,93 @@
 using System.Text.Json;
-using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
 using WinEvo.Ipc;
 
 namespace WinEvo.Agent.Core;
 
 /// <summary>
-/// Runs an <see cref="ActionManifest"/> step-by-step, hydrating each manifest
-/// operation into a typed <see cref="ActionOperation"/> via the injected
-/// <see cref="IOperationParser"/> before dispatching it.
-/// TODO: sub-action steps are not yet expanded; they are reported as a
-/// skipped/failed step result.
+/// Runs an <see cref="ActionDefinition"/> and reports the outcome in the IPC
+/// shape. The action decides which operations run and whether a failed one
+/// stops it; this class only starts it, contains its exceptions and turns the
+/// recorded <see cref="ActionExecution"/> into an <see cref="ExecutionResponse"/>.
 /// </summary>
-public sealed class ActionExecutor
+public static class ActionExecutor
 {
-    private readonly IOperationParser _parser;
-
-    public ActionExecutor(IOperationParser parser)
-    {
-        _parser = parser;
-    }
-
-    public async Task<ExecutionResponse> ExecuteAsync(
-        ActionManifest manifest,
+    public static async Task<ExecutionResponse> ExecuteAsync(
+        ActionDefinition action,
         IReadOnlyDictionary<string, object?> parameters,
         string? requestId,
         CancellationToken ct)
     {
-        var stepResults = new List<StepResult>();
-        var log = new List<string>();
-        bool continueOnErrorMode = manifest.Execution.Mode == ExecutionMode.SequentialContinueOnError;
+        ct.ThrowIfCancellationRequested();
 
-        foreach (var step in manifest.Execution.Steps)
+        var execution = new ActionExecution(parameters);
+        Exception? crash = null;
+        try
         {
-            ct.ThrowIfCancellationRequested();
-
-            if (step is SubActionStep sub)
-            {
-                // TODO: resolve sub-action, bind parameters, recurse.
-                stepResults.Add(new StepResult
-                {
-                    StepId = step.Id,
-                    Operation = $"sub-action:{sub.Ref}",
-                    Success = false,
-                    Error = "sub-action steps are not supported yet",
-                });
-                if (!continueOnErrorMode && !step.ContinueOnError)
-                    break;
-                continue;
-            }
-
-            if (step is not OperationStep opStep)
-                continue;
-
-            ActionOperation op;
-            try
-            {
-                op = _parser.Parse(opStep.Operation, opStep.RawProperties);
-            }
-            catch (Exception ex)
-            {
-                stepResults.Add(new StepResult
-                {
-                    StepId = step.Id,
-                    Operation = opStep.Operation,
-                    Success = false,
-                    Error = $"failed to parse operation: {ex.Message}",
-                });
-                if (!continueOnErrorMode && !step.ContinueOnError)
-                    break;
-                continue;
-            }
-
-            var context = new OperationContext
-            {
-                Parameters = parameters,
-                LogSink = line => log.Add($"[{step.Id ?? opStep.Operation}] {line}"),
-            };
-
-            OperationResult result;
-            try
-            {
-                result = await op.ExecuteAsync(context, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                result = OperationResult.Fail(ex.GetType().Name, ex.Message);
-            }
-
-            stepResults.Add(new StepResult
-            {
-                StepId = step.Id,
-                Operation = opStep.Operation,
-                Success = result.Success,
-                Message = result.Message,
-                Error = result.Error,
-            });
-
-            if (!result.Success && !continueOnErrorMode && !step.ContinueOnError)
-                break;
+            await action.ExecuteAsync(execution, ct).ConfigureAwait(false);
+        }
+        catch (ActionStepFailedException)
+        {
+            // The action stopped on a failed operation, which is already
+            // recorded as a step.
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            crash = ex;
         }
 
-        var overall = stepResults.All(s => s.Success);
+        var stepResults = execution.Steps
+            .Select(step => new StepResult
+            {
+                Operation = step.OperationId,
+                Success = step.Result.Success,
+                Message = step.Result.Message,
+                Error = step.Result.Error,
+            })
+            .ToList();
+
         return new ExecutionResponse
         {
             RequestId = requestId,
-            Success = overall,
-            Message = overall
-                ? $"completed {stepResults.Count} step(s)"
-                : $"failed at step {stepResults.FindIndex(s => !s.Success) + 1} of {stepResults.Count}",
+            Success = crash is null && stepResults.All(s => s.Success),
+            Message = Summarize(stepResults, crash),
+            Error = crash is null ? null : crash.GetType().Name,
             StepResults = stepResults,
-            Log = log,
+            Log = execution.LogLines,
         };
     }
 
-    /// <summary>Convert a JSON-node parameter map (as received over IPC) to a plain object dictionary for templating.</summary>
+    private static string Summarize(List<StepResult> stepResults, Exception? crash)
+    {
+        if (crash is not null)
+            return $"stopped after {stepResults.Count} step(s): {crash.Message}";
+
+        var firstFailure = stepResults.FindIndex(s => !s.Success);
+        return firstFailure < 0
+            ? $"completed {stepResults.Count} step(s)"
+            : $"failed at step {firstFailure + 1} of {stepResults.Count}";
+    }
+
+    /// <summary>
+    /// Resolves the value of every declared parameter from what the caller
+    /// sent over IPC: the supplied value, else the declared default. A
+    /// required parameter with neither is an error.
+    /// </summary>
     public static IReadOnlyDictionary<string, object?> BindParameters(
-        ActionManifest manifest,
+        ActionDescriptor descriptor,
         IReadOnlyDictionary<string, JsonElement> raw)
     {
         var result = new Dictionary<string, object?>();
 
-        foreach (var p in manifest.Parameters)
+        foreach (var p in descriptor.Parameters)
         {
             if (raw.TryGetValue(p.Id, out var supplied) && supplied.ValueKind != JsonValueKind.Null)
             {
                 result[p.Id] = ConvertToClr(supplied);
             }
-            else if (p.Default is { } def && def.ValueKind != JsonValueKind.Null)
+            else if (p.DefaultValue is { } declaredDefault)
             {
-                result[p.Id] = ConvertToClr(def);
+                result[p.Id] = declaredDefault;
             }
             else if (p.Required)
             {

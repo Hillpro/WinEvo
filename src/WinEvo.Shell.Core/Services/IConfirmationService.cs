@@ -1,9 +1,9 @@
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Shell.Core.Services;
 
 /// <summary>
-/// Asks the user to confirm an action whose manifest declares warnings.
+/// Asks the user to confirm an action that declares warnings.
 /// Implementations render a severity-adapted dialog; the VM only supplies the
 /// resolved content and awaits a boolean go/no-go.
 /// </summary>
@@ -20,8 +20,8 @@ public interface IConfirmationService
 /// <summary>A request to confirm execution of an action.</summary>
 /// <param name="ActionName">The action's localized display name — also used as
 /// the typed-phrase challenge string for <see cref="WarningSeverity.Critical"/>.</param>
-/// <param name="Warnings">Warnings to surface, deduplicated by key with the
-/// highest severity per key retained. Order matters: shown top-to-bottom.</param>
+/// <param name="Warnings">Warnings to surface, in the order the action
+/// declares them: shown top-to-bottom.</param>
 public sealed record ConfirmationRequest(
     string ActionName,
     IReadOnlyList<ResolvedWarning> Warnings)
@@ -31,5 +31,5 @@ public sealed record ConfirmationRequest(
         : Warnings.Max(w => w.Severity);
 }
 
-/// <summary>A single warning ready for display (key already resolved against a bundle).</summary>
+/// <summary>A single warning ready for display, its text already in the user's language.</summary>
 public sealed record ResolvedWarning(WarningSeverity Severity, string Message);

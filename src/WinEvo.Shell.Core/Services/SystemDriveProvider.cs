@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace WinEvo.Shell.Core.Services;
 
 /// <summary>
@@ -7,6 +9,14 @@ namespace WinEvo.Shell.Core.Services;
 /// </summary>
 public sealed class SystemDriveProvider : IDriveProvider
 {
+    private readonly CultureInfo _culture;
+
+    /// <param name="culture">Language and number format of the drive labels.</param>
+    public SystemDriveProvider(CultureInfo culture)
+    {
+        _culture = culture;
+    }
+
     public IReadOnlyList<DriveOption> Enumerate(IReadOnlyList<string>? allowedTypes)
     {
         var result = new List<DriveOption>();
@@ -38,11 +48,15 @@ public sealed class SystemDriveProvider : IDriveProvider
         return false;
     }
 
-    private static string FormatLabel(DriveInfo drive)
+    private string FormatLabel(DriveInfo drive)
     {
         var letter = drive.Name.TrimEnd('\\');
-        var label = string.IsNullOrWhiteSpace(drive.VolumeLabel) ? drive.DriveType.ToString() : drive.VolumeLabel;
+        var label = string.IsNullOrWhiteSpace(drive.VolumeLabel) ? DescribeType(drive.DriveType) : drive.VolumeLabel;
         var freeGb = drive.AvailableFreeSpace / (1024d * 1024d * 1024d);
-        return $"{letter}  {label}  ({freeGb:0.#} GB free)";
+        return ViewModelText.Format("Drive_Label", _culture, letter, label, freeGb);
     }
+
+    /// <summary>What to call a drive that has no volume name of its own.</summary>
+    private string DescribeType(DriveType type)
+        => ViewModelText.Find($"DriveType_{type}", _culture) ?? type.ToString();
 }

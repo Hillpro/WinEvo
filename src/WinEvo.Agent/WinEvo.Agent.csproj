@@ -17,6 +17,7 @@
        Directory.Packages.props). -->
   <ItemGroup>
     <ProjectReference Include="..\WinEvo.Agent.Core\WinEvo.Agent.Core.csproj" />
+    <ProjectReference Include="..\WinEvo.Actions\WinEvo.Actions.csproj" />
   </ItemGroup>
 
 </Project>

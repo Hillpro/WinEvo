@@ -14,9 +14,8 @@ service AgentService {
   rpc Handshake(HandshakeRequest) returns (HandshakeResponse);
 
   rpc GetAgentStatus(google.protobuf.Empty) returns (AgentStatus);
-  rpc ListOperations(google.protobuf.Empty) returns (OperationCatalog);
 
-  rpc ValidateAction(ActionManifest) returns (ValidationReport);
+  rpc ReadState(ReadStateRequest) returns (StateResponse);
   rpc DryRunAction(DryRunRequest) returns (DryRunReport);
 
   rpc ExecuteAction(ExecuteRequest) returns (stream ExecutionEvent);
@@ -40,7 +39,9 @@ message HandshakeRequest {
 message HandshakeResponse {
   int32 agent_protocol_version = 1;
   string agent_version = 2;
-  repeated string supported_operations = 3;
+  // Ids of the actions compiled into this agent, so a client can disable an
+  // action the agent does not contain.
+  repeated string action_ids = 3;
   repeated string capability_flags = 4;
 }
 
@@ -50,7 +51,7 @@ enum AgentMode {
   AGENT_MODE_BROKER = 2;
 }
 
-// ---- Status / catalog ----
+// ---- Status ----
 
 message AgentStatus {
   AgentMode mode = 1;
@@ -59,41 +60,24 @@ message AgentStatus {
   google.protobuf.Timestamp started_at = 4;
 }
 
-message OperationCatalog {
-  repeated OperationDescriptor operations = 1;
+// ---- State ----
+
+// Actions are compiled into the agent and addressed by id. A client never
+// sends the definition of an action, only which one it means.
+message ReadStateRequest {
+  string action_id = 1;
 }
 
-message OperationDescriptor {
-  string id = 1;
-  string display_name = 2;
-  bool elevates = 3;
-  bool supports_undo = 4;
-  bool supports_dry_run = 5;
-}
-
-// ---- Manifest / validation ----
-
-// Opaque JSON payload of the manifest. The agent parses it using the same
-// ActionModel library as the Shell; no need to re-describe the schema in proto.
-message ActionManifest {
-  string manifest_json = 1;
-}
-
-message ValidationReport {
-  bool valid = 1;
-  repeated ValidationIssue issues = 2;
-}
-
-message ValidationIssue {
-  string severity = 1;
-  string json_pointer = 2;
-  string message = 3;
+// Live system values behind the action's parameters, keyed by parameter id
+// and JSON-encoded. A parameter with no readable state is absent.
+message StateResponse {
+  map<string, string> values = 1;
 }
 
 // ---- Dry-run / execute / undo ----
 
 message DryRunRequest {
-  ActionManifest manifest = 1;
+  string action_id = 1;
   map<string, string> parameters = 2;
 }
 
@@ -103,7 +87,7 @@ message DryRunReport {
 }
 
 message ExecuteRequest {
-  ActionManifest manifest = 1;
+  string action_id = 1;
   map<string, string> parameters = 2;
 }
 

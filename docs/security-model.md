@@ -5,17 +5,20 @@
 ## Trust boundaries
 
 ```
-  Untrusted input ─► Shell (unelevated) ─► IPC ─► Agent (elevated on demand)
-                                   │
-                              Community JSON
-                            (parsed but not code)
+  User input ─► Shell (unelevated) ─► IPC ─► Agent (elevated on demand)
+                       │                         │
+              reads descriptors          runs the action it is
+              never runs actions         asked for, from its own
+                                         compiled catalog
 ```
 
 Three layers of defence:
 
-1. **The Shell is never elevated.** A compromise of the UI cannot escalate without the agent agreeing. — ✅ The Shell launches `asInvoker`; the elevated broker is spawned only when an action requires it.
-2. **The agent accepts only JSON, never code.** Manifests reference operations and pass parameters; they cannot inject arbitrary binaries or scripts except through operations like `powershell` or `external-process`, whose inputs are constrained by the operation implementation. — ✅ Structurally enforced; *(not implemented yet)* runtime input-sanitisation rules for those operations (see below).
-3. **The operation set is the security boundary.** Adding an operation is a trusted-code PR; composing existing operations (and sub-actions) is an untrusted-data contribution. — ✅ Enforced by project layout. *(not implemented yet)* JSON-Schema validation of manifests at load time — parsing is currently lenient and unknown fields are silently ignored.
+1. **The Shell is never elevated.** A compromise of the UI cannot escalate without the agent agreeing. ✅ The Shell launches `asInvoker`; the elevated broker is spawned only when an action requires it.
+2. **The agent runs only actions compiled into it.** A caller names an action by id and supplies parameter values. It cannot supply steps, scripts, binaries or a definition of an action, and it cannot lower an action's elevation requirement: that is read from the agent's own catalog. ✅ Enforced by the message format; an unknown id is refused and logged.
+3. **Operations are the review boundary.** Actions are expected to touch the system only through the closed set of operations, and adding an operation gets the strictest review. ✅ By convention and code review. Nothing in the compiler stops an action from calling a Windows API directly, so reviewing an action includes checking that it does not.
+
+What remains untrusted is the **parameter values**. They come from the Shell, and before client verification exists, from any process running as the same user that reaches the pipe. Every action must treat them as hostile input; see the operations section below.
 
 ## Elevation
 
@@ -24,42 +27,45 @@ Three layers of defence:
 - *(not implemented yet)* **Service mode.** The target design installs a Windows Service for persistent background execution; the UI toggle that switches between service and on-demand broker is not wired. Only the on-demand broker is shipped today.
 - *(not implemented yet)* **Authenticode client verification.** The agent will eventually resolve the connecting client's PID via `GetNamedPipeClientProcessId` and verify its Authenticode signature before accepting commands. The named-pipe ACL is the only access control today — DACL grants the same-user SID full duplex access, and when the broker is elevated the pipe's mandatory integrity label is lowered to Medium so an unelevated Shell can still connect.
 
-## Community actions
+## Where actions come from
 
-What happens to a community manifest dropped into `%LOCALAPPDATA%\WinEvo\Actions\`:
+Only the actions shipped inside WinEvo exist. There is no folder the app scans, no file a user can drop in, and no network source.
 
-- **Parsed** — ✅ lenient parse; unknown properties ignored. *(not implemented yet)* schema validation via `JsonSchema.Net`.
-- **Rendered in the UI with declared warnings and severity** — ✅ severity-adapted `ContentDialog` gates execution: `info`/`warning` show a plain Continue, `danger` requires an "I understand" checkbox, `critical` additionally requires the user to type the action name. Warning keys resolve against `resources/Strings.{en,fr}.json` with `{token}` interpolation; dedup by key with max severity per key wins.
-- **Never auto-run; the user always confirms** — ✅ execution requires an explicit click on the detail view, followed by the confirmation dialog above when warnings are declared.
-- **Executed using only built-in operations, whose implementations have been reviewed** — ✅ 9 operations wired: `registry-set`, `registry-delete`, `registry-read`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`. Manifests that use any other operation fail cleanly at runtime (`operation 'X' is not implemented`).
+- **Reviewed before release.** ✅ An action is a C# class in the repository and reaches users only through a release build.
+- **Rendered with its declared warnings and severity.** ✅ A severity-adapted `ContentDialog` gates execution: `info`/`warning` show a plain Continue, `danger` requires an "I understand" checkbox, `critical` additionally requires the user to type the action name.
+- **Never auto-run; the user always confirms.** ✅ Execution requires an explicit click or switch flip in the detail view, followed by the confirmation dialog above when warnings are declared.
+
+*(not decided)* Actions from third parties. If they return, the two candidates are a simple data format restricted to composing existing operations, or loading a locally built assembly in an explicit developer mode. The second runs arbitrary code inside the elevated agent: it would only ever be an opt-in for the person who built the assembly, loaded from a location that cannot be written without elevation.
 
 ## `external-process`, `builtin-tool`, `powershell`, and `command`
 
-These are the most powerful operations and deserve extra care.
+These are the most powerful operations and deserve extra care. All four are wired.
 
-- `external-process` ✅ runs a user-supplied executable path. For community manifests the path should resolve to a system binary (`%SystemRoot%\System32\...`), a Sysinternals tool (via a future resolver — no project exists yet), or a binary bundled with the manifest (future). *(not implemented yet)* — no validator currently flags arbitrary user-supplied paths or forces a `danger`-severity warning on them.
-- `builtin-tool` ✅ narrowed alias of `external-process` for stock Windows tools. Accepts a bare tool `name` (no path), appends `.exe` if missing, rejects any input containing `\`, `/`, `:`, or `..`, and always resolves against `Environment.SystemDirectory`. Preferred over raw `external-process` for `cipher`, `sc`, `ipconfig`, etc. because the manifest intent and the target binary are unambiguous at review time.
-- `powershell` ✅ runs a user-supplied script via `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command <script>`. `{{params.X}}` substitutions are rendered before dispatch. Community manifests using this operation should declare a `danger`-severity warning.
-- `command` ✅ runs a user-supplied `cmd.exe` script (single- or multi-line). Parameter values substituted via `{{...}}` are **not** auto-escaped; reviewers must scrutinise every parameter substitution that lands in a shell command.
+- `external-process` runs the executable an action names, with each argument passed separately so it is never re-parsed by a shell. An action should point it at a system binary or a tool WinEvo itself provides, never at a path taken from a parameter.
+- `builtin-tool` is a narrowed form for stock Windows tools. It accepts a bare tool name (no path), appends `.exe` if missing, rejects any input containing `\`, `/`, `:`, or `..`, and always resolves against `Environment.SystemDirectory`. Preferred over `external-process` for `cipher`, `sc`, `ipconfig`, etc.
+- `powershell` runs a script via `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command <script>`.
+- `command` runs a line through `cmd.exe /C`.
+
+**Parameter values must never be inserted into a `powershell` script or a `command` line.** The text of both is executed as written, with the agent's privileges, so a value such as `C:\ & del ...` would run. Pass a parameter value only as its own argument to `external-process` or `builtin-tool`. *(not implemented yet)* Nothing checks this automatically; it is a review rule for every action.
 
 ## Undo *(not implemented yet)*
 
-Per-operation undo will capture the minimum state needed to revert. Nothing is wired today. The `undo` block and per-step `backupForUndo: true` flag have been stripped from the live schema for alpha; both are preserved in [manifest-reference/](manifest-reference/) as the target shape. The runtime parser is more lenient than the live schema and still tolerates a stray `backupForUndo` as a no-op, but new manifests should not declare it.
+Per-operation undo will capture the minimum state needed to revert. Nothing is wired today: every executed action is permanent. Because every operation an action runs goes through `ActionExecution`, that is where the capture will happen.
 
 Target shape:
 
-- `registry-set` / `registry-delete` — previous value or "did not exist" marker.
-- `service-stop` / `service-start` — previous running state.
-- `file-delete` — file contents backed up below a size threshold; larger files trigger a manual confirmation ("cannot undo this delete").
-- `file-copy` / `file-move` — destination state before operation.
-- `process-kill` — inherently irreversible; documented and flagged.
-- `external-process` / `powershell` / `command` — irreversible unless the manifest supplies explicit undo steps.
+- `registry-set` / `registry-delete`: previous value or "did not exist" marker.
+- `service-stop` / `service-start`: previous running state.
+- `file-delete`: file contents backed up below a size threshold; larger files trigger a manual confirmation ("cannot undo this delete").
+- `file-copy` / `file-move`: destination state before operation.
+- `process-kill`: inherently irreversible; documented and flagged.
+- `external-process` / `powershell` / `command`: irreversible unless the action supplies explicit undo code.
 
 Undo state will live in `%ProgramData%\WinEvo\UndoStore\<exec-id>.json` with an index in `UndoStore\index.db`.
 
 ## Restore points *(not implemented yet)*
 
-Opt-in per manifest (target shape: `execution.createRestorePoint: true`). When wired, the agent will create a System Restore Point before the first step. Restore points are **defence in depth**, not the primary recovery path. The `createRestorePoint` field has been stripped from the live schema for alpha and lives in [manifest-reference/](manifest-reference/) until the `system-restore-point` operation is wired.
+Opt-in per action. When wired, the agent will create a System Restore Point before the action's first operation. Restore points are **defence in depth**, not the primary recovery path. They depend on the planned `system-restore-point` operation.
 
 ## Audit log
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using WinEvo.Shell.Core.Services;
 
 namespace WinEvo.Shell.Core.Tests;
@@ -32,5 +33,17 @@ public class SystemDriveProviderTests
         string[] allowed = ["fixed"];
         Assert.False(SystemDriveProvider.IsTypeAllowed("Network", allowed));
         Assert.False(SystemDriveProvider.IsTypeAllowed("CDRom", allowed));
+    }
+
+    [Theory]
+    [InlineData("en", "GB free)")]
+    [InlineData("fr", "Go libres)")]
+    public void Drive_labels_are_written_in_the_requested_language(string language, string expectedEnding)
+    {
+        // Every Windows machine has at least its system drive, fixed and ready.
+        var drives = new SystemDriveProvider(CultureInfo.GetCultureInfo(language)).Enumerate(["fixed"]);
+
+        Assert.NotEmpty(drives);
+        Assert.All(drives, drive => Assert.EndsWith(expectedEnding, drive.Label, StringComparison.Ordinal));
     }
 }

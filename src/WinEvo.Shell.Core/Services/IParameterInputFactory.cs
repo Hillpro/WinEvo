@@ -1,4 +1,5 @@
-using WinEvo.ActionModel;
+using System.Globalization;
+using WinEvo.Actions.Abstractions;
 using WinEvo.Shell.Core.ViewModels;
 
 namespace WinEvo.Shell.Core.Services;
@@ -11,5 +12,5 @@ namespace WinEvo.Shell.Core.Services;
 /// </summary>
 public interface IParameterInputFactory
 {
-    ParameterInputViewModel Create(Parameter parameter, string? language);
+    ParameterInputViewModel Create(Parameter parameter, CultureInfo culture);
 }

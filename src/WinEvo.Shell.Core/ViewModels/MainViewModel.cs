@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
+using WinEvo.Actions.Abstractions;
 using WinEvo.Ipc;
 using WinEvo.Shell.Core.Services;
 
@@ -15,34 +17,41 @@ namespace WinEvo.Shell.Core.ViewModels;
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject
 {
-    private readonly ActionCatalog _catalog;
     private readonly AgentLauncher _agentLauncher;
-    private readonly string? _language;
+    private readonly CultureInfo _culture;
     private readonly DispatcherQueue _dispatcher;
     private readonly IConfirmationService _confirmation;
-    private readonly StringBundle _strings;
     private readonly IParameterInputFactory _parameterFactory;
 
+    /// <param name="catalog">
+    /// Source of the action list. Only descriptors are read here; actions are
+    /// executed by the agent, never in this process.
+    /// </param>
+    /// <param name="culture">Language every action text is displayed in.</param>
     public MainViewModel(
-        ActionCatalog catalog,
+        IActionCatalog catalog,
         AgentLauncher agentLauncher,
-        string? language,
+        CultureInfo culture,
         DispatcherQueue dispatcher,
         IConfirmationService confirmation,
-        StringBundle strings,
         IParameterInputFactory parameterFactory)
     {
-        _catalog = catalog;
         _agentLauncher = agentLauncher;
-        _language = language;
+        _culture = culture;
         _dispatcher = dispatcher;
         _confirmation = confirmation;
-        _strings = strings;
         _parameterFactory = parameterFactory;
         _agentLauncher.StateChanged += OnAgentStateChanged;
+        AgentStatus = ViewModelText.Get("Agent_NotConnected", culture);
+
+        var items = catalog.Actions
+            .Select(action => new ActionItemViewModel(action.Descriptor, culture))
+            .OrderBy(item => item.Category, StringComparer.Ordinal)
+            .ThenBy(item => item.DisplayName, StringComparer.Create(culture, ignoreCase: true));
+        Actions = new ObservableCollection<ActionItemViewModel>(items);
     }
 
-    public ObservableCollection<ActionItemViewModel> Actions { get; } = new();
+    public ObservableCollection<ActionItemViewModel> Actions { get; }
 
     [ObservableProperty]
     public partial ActionItemViewModel? SelectedAction { get; set; }
@@ -51,13 +60,13 @@ public sealed partial class MainViewModel : ObservableObject
     public partial ActionDetailViewModel? Detail { get; set; }
 
     [ObservableProperty]
-    public partial string AgentStatus { get; set; } = "Not connected";
+    public partial string AgentStatus { get; set; }
 
     partial void OnSelectedActionChanged(ActionItemViewModel? value)
     {
         Detail = value is null
             ? null
-            : new ActionDetailViewModel(value, _language, _agentLauncher, _dispatcher, _confirmation, _strings, _parameterFactory);
+            : new ActionDetailViewModel(value, _culture, _agentLauncher, _dispatcher, _confirmation, _parameterFactory);
     }
 
     partial void OnDetailChanged(ActionDetailViewModel? oldValue, ActionDetailViewModel? newValue)
@@ -80,24 +89,15 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task InitialiseAsync(CancellationToken ct)
     {
-        await _catalog.LoadAsync(ct).ConfigureAwait(false);
-
-        await _dispatcher.RunOnUiAsync(() =>
-        {
-            Actions.Clear();
-            foreach (var manifest in _catalog.Manifests.OrderBy(m => m.Category).ThenBy(m => m.Name))
-                Actions.Add(new ActionItemViewModel(manifest, _language));
-        }).ConfigureAwait(false);
-
         try
         {
-            await _dispatcher.RunOnUiAsync(() => AgentStatus = "Starting agent…").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => AgentStatus = ViewModelText.Get("Agent_Starting", _culture)).ConfigureAwait(false);
             await _agentLauncher.StartAsync(elevated: false, ct).ConfigureAwait(false);
             // OnAgentStateChanged fires from StartAsync and updates AgentStatus.
         }
         catch (Exception ex)
         {
-            await _dispatcher.RunOnUiAsync(() => AgentStatus = $"Agent error: {ex.Message}").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => AgentStatus = ViewModelText.Format("Agent_Error", _culture, ex.Message)).ConfigureAwait(false);
         }
     }
 
@@ -117,13 +117,16 @@ public sealed partial class MainViewModel : ObservableObject
         AgentStatus = FormatStatus(_agentLauncher.LastHandshake, _agentLauncher.IsElevated, runningCount);
     }
 
-    private static string FormatStatus(HandshakeResponse? handshake, bool elevated, int runningCount)
+    private string FormatStatus(HandshakeResponse? handshake, bool elevated, int runningCount)
     {
         if (handshake is null)
-            return "Not connected";
-        var badge = elevated ? " (elevated)" : "";
-        var runningLabel = runningCount == 1 ? "1 running" : $"{runningCount} running";
-        return $"Connected — agent {handshake.AgentVersion}{badge} · {runningLabel}";
+            return ViewModelText.Get("Agent_NotConnected", _culture);
+
+        return ViewModelText.Format(
+            elevated ? "Agent_ConnectedElevated" : "Agent_Connected",
+            _culture,
+            handshake.AgentVersion,
+            runningCount);
     }
 
 }

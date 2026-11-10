@@ -23,37 +23,44 @@ public class PipeMessageSerializerTests
             RequestId = "r1",
             ClientKind = "shell",
             ClientVersion = "0.2.0",
-            ProtocolVersion = 1,
+            ProtocolVersion = 2,
         });
 
         Assert.Equal("r1", result.RequestId);
         Assert.Equal("shell", result.ClientKind);
         Assert.Equal("0.2.0", result.ClientVersion);
-        Assert.Equal(1, result.ProtocolVersion);
+        Assert.Equal(2, result.ProtocolVersion);
     }
 
     [Fact]
-    public void HandshakeResponse_round_trips_with_operation_list()
+    public void HandshakeRequest_defaults_to_the_current_protocol_version()
+    {
+        var request = new HandshakeRequest { ClientKind = "shell", ClientVersion = "0.2.0" };
+
+        Assert.Equal(PipeProtocol.Version, request.ProtocolVersion);
+    }
+
+    [Fact]
+    public void HandshakeResponse_round_trips()
     {
         var result = RoundTrip(new HandshakeResponse
         {
             RequestId = "r2",
             AgentVersion = "0.2.0",
-            AgentProtocolVersion = 1,
-            SupportedOperations = ["registry-set", "delay"],
+            AgentProtocolVersion = 2,
         });
 
         Assert.Equal("0.2.0", result.AgentVersion);
-        Assert.Equal(["registry-set", "delay"], result.SupportedOperations);
+        Assert.Equal(2, result.AgentProtocolVersion);
     }
 
     [Fact]
-    public void ExecuteRequest_round_trips_manifest_and_typed_parameters()
+    public void ExecuteRequest_round_trips_action_id_and_typed_parameters()
     {
         var result = RoundTrip(new ExecuteRequest
         {
             RequestId = "r3",
-            Manifest = JsonNode.Parse("""{"id":"x","version":"1.0.0"}""")!,
+            ActionId = "storage.wipe-free-space",
             Parameters = new Dictionary<string, JsonNode?>
             {
                 ["flag"] = JsonValue.Create(true),
@@ -62,7 +69,7 @@ public class PipeMessageSerializerTests
             },
         });
 
-        Assert.Equal("x", result.Manifest["id"]!.GetValue<string>());
+        Assert.Equal("storage.wipe-free-space", result.ActionId);
         Assert.True(result.Parameters["flag"]!.GetValue<bool>());
         Assert.Equal(7, result.Parameters["count"]!.GetValue<int>());
         Assert.Equal("disk", result.Parameters["name"]!.GetValue<string>());
@@ -78,8 +85,8 @@ public class PipeMessageSerializerTests
             Message = "failed at step 1 of 2",
             StepResults =
             [
-                new StepResult { StepId = "s1", Operation = "registry-set", Success = false, Error = "access denied" },
-                new StepResult { StepId = "s2", Operation = "delay", Success = true, Message = "waited" },
+                new StepResult { Operation = "registry-set", Success = false, Error = "access denied" },
+                new StepResult { Operation = "delay", Success = true, Message = "waited" },
             ],
             Log = ["line one", "line two"],
         });
@@ -89,6 +96,32 @@ public class PipeMessageSerializerTests
         Assert.Equal("registry-set", result.StepResults[0].Operation);
         Assert.Equal("access denied", result.StepResults[0].Error);
         Assert.Equal(["line one", "line two"], result.Log);
+    }
+
+    [Fact]
+    public void ReadStateRequest_round_trips()
+    {
+        var result = RoundTrip(new ReadStateRequest { RequestId = "r6", ActionId = "customization.bing-search-results" });
+
+        Assert.Equal("r6", result.RequestId);
+        Assert.Equal("customization.bing-search-results", result.ActionId);
+    }
+
+    [Fact]
+    public void StateResponse_round_trips_typed_values()
+    {
+        var result = RoundTrip(new StateResponse
+        {
+            RequestId = "r7",
+            Values = new Dictionary<string, JsonNode?>
+            {
+                ["isOn"] = JsonValue.Create(false),
+                ["level"] = JsonValue.Create("high"),
+            },
+        });
+
+        Assert.False(result.Values["isOn"]!.GetValue<bool>());
+        Assert.Equal("high", result.Values["level"]!.GetValue<string>());
     }
 
     [Fact]

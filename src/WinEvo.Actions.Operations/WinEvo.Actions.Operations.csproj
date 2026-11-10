@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <!-- System.ServiceProcess.ServiceController / System.Management are re-added
-       with the service-* and WMI-backed operations (see OperationParser TODO). -->
+       with the service-* and WMI-backed operations. -->
   <ItemGroup>
     <ProjectReference Include="..\WinEvo.Actions.Abstractions\WinEvo.Actions.Abstractions.csproj" />
   </ItemGroup>

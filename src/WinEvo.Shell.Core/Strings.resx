@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Status_MissingParameters" xml:space="preserve">
+    <value>Missing required parameter(s): {0}</value>
+  </data>
+  <data name="Status_CancelledByUser" xml:space="preserve">
+    <value>Cancelled by user.</value>
+  </data>
+  <data name="Status_WaitingForElevation" xml:space="preserve">
+    <value>Waiting for elevation…</value>
+  </data>
+  <data name="Status_Running" xml:space="preserve">
+    <value>Running…</value>
+  </data>
+  <data name="Status_Succeeded" xml:space="preserve">
+    <value>Done.</value>
+  </data>
+  <data name="Status_FailedAtStep" xml:space="preserve">
+    <value>Failed at step {0} of {1}.</value>
+  </data>
+  <data name="Status_Failed" xml:space="preserve">
+    <value>Failed.</value>
+  </data>
+  <data name="Status_Error" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="Status_ElevationDeclined" xml:space="preserve">
+    <value>Elevation was declined. Action not executed.</value>
+  </data>
+  <data name="Status_BlockedDownload" xml:space="preserve">
+    <value>Windows blocked the action because this copy was downloaded from the internet. Right-click the downloaded .zip, open Properties, tick Unblock, then extract it again.</value>
+  </data>
+  <data name="Status_AgentNotConnected" xml:space="preserve">
+    <value>Agent not connected.</value>
+  </data>
+  <data name="Agent_NotConnected" xml:space="preserve">
+    <value>Not connected</value>
+  </data>
+  <data name="Agent_Starting" xml:space="preserve">
+    <value>Starting agent…</value>
+  </data>
+  <data name="Agent_Error" xml:space="preserve">
+    <value>Agent error: {0}</value>
+  </data>
+  <data name="Agent_Connected" xml:space="preserve">
+    <value>Connected · agent {0} · {1} running</value>
+  </data>
+  <data name="Agent_ConnectedElevated" xml:space="preserve">
+    <value>Connected · agent {0} (elevated) · {1} running</value>
+  </data>
+  <data name="Drive_Label" xml:space="preserve">
+    <value>{0}  {1}  ({2:0.#} GB free)</value>
+  </data>
+  <data name="DriveType_Fixed" xml:space="preserve">
+    <value>Local disk</value>
+  </data>
+  <data name="DriveType_Removable" xml:space="preserve">
+    <value>Removable drive</value>
+  </data>
+</root>

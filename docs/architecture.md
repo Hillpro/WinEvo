@@ -1,12 +1,12 @@
 # Architecture
 
 > **Implementation status (summary).**
-> - ✅ **Wired:** Shell (WinUI 3), Agent broker process, JSON-over-pipe IPC, handshake, lazy UAC promotion with Medium-IL pipe-label handling, 9 operations (`registry-set`, `registry-delete`, `registry-read`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`), end-to-end execute flow, Job Object for child-process cleanup (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`), severity-adapted confirmation dialog for action warnings (info/warning/danger/critical with typed-phrase challenge), shared string bundles in `resources/Strings.{en,fr}.json` with `{token}` interpolation, deterministic agent teardown on window close.
-> - ✅ **Wired (continued):** type-specific parameter inputs (string→TextBox, integer→NumberBox, boolean→ToggleSwitch, enum→ComboBox, drive→drive-picker), selected per parameter type by `ParameterInputFactory` + `ParameterInputTemplateSelector`.
-> - 🚧 **Partial:** manifest parse (lenient, no JSON Schema validation), footer running-count (observes the currently-selected Detail VM only — switching selection mid-execution drops the subscription).
-> - 🔲 **Not yet implemented:** Service mode, service install/uninstall, Tray ↔ Agent IPC, gRPC transport, streaming progress events, undo, dry-run, restore points, execution audit log, Authenticode client verification, code signing, Sysinternals tool resolver, roadmap operations (`service-*`, `file-*`, `sysinternals-tool`, `system-restore-point`), sub-action step execution, template functions (`drive()` / `basename()` / `dirname()`), dedicated widgets for the remaining `string`-fallback parameter types (`wifi-profile`, `file-path`, `directory-path`, `service-name`).
+> - ✅ **Wired:** Shell (WinUI 3), Agent broker process, JSON-over-pipe IPC, handshake, lazy UAC promotion with Medium-IL pipe-label handling, code-defined actions run by id, 8 operations (`registry-set`, `registry-delete`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`), live state read from the agent when an action is selected, Job Object for child-process cleanup (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`), severity-adapted confirmation dialog for action warnings (info/warning/danger/critical with typed-phrase challenge), the whole window localized (English and French) in the Windows display language, deterministic agent teardown on window close.
+> - ✅ **Wired (continued):** type-specific parameter inputs (string→TextBox, integer→NumberBox, boolean→ToggleSwitch, enum→ComboBox, drive→drive-picker), selected per `Parameter` subclass by `ParameterInputFactory` + `ParameterInputTemplateSelector`.
+> - 🚧 **Partial:** footer running-count (observes the currently-selected Detail VM only; switching selection mid-execution drops the subscription).
+> - 🔲 **Not yet implemented:** Service mode, service install/uninstall, Tray ↔ Agent IPC, gRPC transport, streaming progress events, undo, dry-run, restore points, execution audit log, Authenticode client verification, code signing, Sysinternals tool resolver, planned operations (`service-*`, `file-*`, `sysinternals-tool`, `system-restore-point`), pickers for a Wi-Fi profile / file / folder / service, actions supplied by third parties.
 >
-> **Live schema vs reference snapshot.** The live [actions/schemas/action.schema.json](../actions/schemas/action.schema.json) covers only what the runtime consumes today. The full target shape — undo, dryRun, preconditions, sub-actions, restore points, progress, OS/arch gates, the roadmap operations — is preserved in [docs/manifest-reference/](manifest-reference/). The narrative below describes the **full architecture** (including unimplemented pieces); when an alpha-only constraint matters, it's called out explicitly. Companion docs mark target-vs-current per feature: [ipc-contract.md](ipc-contract.md), [action-authoring.md](action-authoring.md), [security-model.md](security-model.md).
+> The narrative below describes the **full architecture**, including pieces that are not built yet; those are called out where it matters. Companion docs mark target-vs-current per feature: [ipc-contract.md](ipc-contract.md), [action-authoring.md](action-authoring.md), [security-model.md](security-model.md).
 
 ## Processes
 
@@ -54,15 +54,17 @@ gRPC contract is defined in [`WinEvo.Contracts/Protos/agent-service.proto`](../s
 
 ## Action model
 
-Actions are declarative JSON manifests composed from a closed set of **operations** (registry, external-process, service control, etc.). Composition via **sub-action** references is target-only — the runtime parses sub-action steps but execution returns "not supported", and the alpha schema doesn't list them at all (see [manifest-reference/](manifest-reference/)). See [action-authoring.md](action-authoring.md) for the schema and examples.
+An action is a C# class compiled into WinEvo. It has two halves: a **descriptor**, plain data from which the Shell lists the action and draws its inputs, and **behaviour**, which runs only in the agent and is composed from a closed set of **operations** (registry writes, process control, running a tool). See [action-authoring.md](action-authoring.md).
 
-Community extensibility lives at the **manifest** level — anyone can write a JSON action and drop it into `%LOCALAPPDATA%\WinEvo\Actions\`. Extending the operation set (adding fundamentally new trusted-code operations to the agent) requires a code-level PR and review; this is the security boundary.
+The Shell and the agent both load the same actions assembly. The Shell reads descriptors and never executes action code; it sends the agent an action id and the parameter values. The agent looks the id up in its own catalog, so a caller can only ask for an action the agent already contains.
+
+Actions cannot be added without rebuilding WinEvo. Whether third-party actions return, as a simple data format or as a locally built assembly loaded in an explicit developer mode, is not decided. Extending the operation set is a code change with the strictest review; operations are what actually touch the system.
 
 ## Distribution
 
 See [distribution.md](distribution.md) for the full picture, including why MSIX was abandoned.
 
-1. ✅ **Unpackaged / portable** — self-contained zip containing `WinEvo.exe`, `agent/WinEvo.Agent.exe`, the bundled .NET + WinAppSDK runtimes, action manifests, and resources. Runs from any folder with no install and no admin rights; the Shell spawns the agent from `agent/WinEvo.Agent.exe` next to itself, unelevated by default and UAC-promoted on demand.
+1. ✅ **Unpackaged / portable** — self-contained zip containing `WinEvo.exe`, `agent/WinEvo.Agent.exe`, and the bundled .NET + WinAppSDK runtimes. Runs from any folder with no install and no admin rights; the Shell spawns the agent from `agent/WinEvo.Agent.exe` next to itself, unelevated by default and UAC-promoted on demand.
 2. 🔲 **Signed installer** *(target)* — an `.msi`/`.exe` built from `WinEvo.Installer.wixproj`, carrying the same payload. Also the route to a Store listing, under a policy that accepts a download URL to a signed installer instead of a package.
 3. ❌ **MSIX** — built during 0.1–0.2 and abandoned; the Store refused the restricted capability a packaged build needs in order to write real user settings.
 
@@ -74,12 +76,12 @@ Either shipping channel embeds the agent **inside** its own payload — there is
 
 See [security-model.md](security-model.md) for the full treatment. In brief:
 
-- Elevation is opt-in per action. Non-elevated actions never touch the agent. ✅ wired.
-- *(target)* Every destructive operation supports **undo** with state backup in `%ProgramData%\WinEvo\UndoStore\`. The `undo` block was stripped from the live schema for alpha; manifests in [manifest-reference/](manifest-reference/) document the target shape.
-- *(target)* Restore points are opt-in per action manifest, not a default. (`execution.createRestorePoint` is reference-only.)
-- *(target)* Dry-run preview is opt-in per action manifest. (`dryRun` block reference-only.)
+- Elevation is opt-in per action. An action that does not need it runs in the unelevated broker. ✅ wired.
+- *(target)* Every destructive operation supports **undo** with state backup in `%ProgramData%\WinEvo\UndoStore\`.
+- *(target)* Restore points are opt-in per action, not a default.
+- *(target)* Dry-run preview is opt-in per action.
 - *(target)* All executions are logged to `%ProgramData%\WinEvo\Logs\executions.jsonl` for audit + undo discovery.
 
 ## Project layout
 
-See the top-level [README.md](../README.md) and solution file for the canonical project structure. Dependency flow is strictly acyclic: `Contracts` → `ActionModel` → `Actions.Abstractions` → `Actions.Operations` → `Agent.Core` → `Agent`, with `Ipc` sitting beside `Contracts`, and `Shell.Core` / `Shell` / `Tray` consuming `Contracts` + `Ipc` only (no direct reference to agent internals).
+See the top-level [README.md](../README.md) and solution file for the canonical project structure. Dependency flow is strictly acyclic: `Actions.Abstractions` → `Actions.Operations` → `Actions`, with `Contracts` → `Ipc` beside them. `Agent.Core` and `Shell.Core` depend on `Actions.Abstractions` and `Ipc` only; the two executables, `Agent` and `Shell`, are where the actions assembly is brought in and the catalog is composed. `Shell.Core` has no reference to agent internals.

@@ -1,25 +1,26 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 using WinEvo.Shell.Core.Services;
 
 namespace WinEvo.Shell.Core.ViewModels;
 
 /// <summary>
-/// Picker for <c>drive</c> parameters. Populated by the
+/// Picker for <see cref="DriveParameter"/>. Populated by the
 /// <see cref="Services.IParameterInputFactory"/> from an
 /// <see cref="IDriveProvider"/>; the ComboBox binds to
 /// <see cref="DriveOptions"/> and <see cref="SelectedDrive"/>. The drive's
-/// <see cref="DriveOption.Root"/> is the value substituted into the manifest.
+/// <see cref="DriveOption.Root"/> is the value the action receives.
 /// </summary>
 public sealed partial class DriveParameterInputViewModel : ParameterInputViewModel
 {
     public DriveParameterInputViewModel(
-        Parameter parameter,
-        string? language,
+        DriveParameter parameter,
+        CultureInfo culture,
         IReadOnlyList<DriveOption> drives)
-        : base(parameter, language)
+        : base(parameter, culture)
     {
         DriveOptions = new ObservableCollection<DriveOption>(drives);
         SelectedDrive = DriveOptions.FirstOrDefault();
@@ -34,4 +35,11 @@ public sealed partial class DriveParameterInputViewModel : ParameterInputViewMod
 
     public override JsonNode? ToJsonValue()
         => SelectedDrive is null ? null : JsonValue.Create(SelectedDrive.Root);
+
+    public override void ShowLiveValue(JsonNode liveValue)
+    {
+        var liveRoot = liveValue.GetValue<string>();
+        SelectedDrive = DriveOptions.FirstOrDefault(drive => string.Equals(drive.Root, liveRoot, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"live value '{liveRoot}' of parameter '{Id}' is not an available drive");
+    }
 }

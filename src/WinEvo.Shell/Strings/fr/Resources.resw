@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AboutButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>À propos de WinEvo</value>
+  </data>
+  <data name="AboutButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>À propos de WinEvo</value>
+  </data>
+  <data name="SelectActionHint.Text" xml:space="preserve">
+    <value>Sélectionnez une action à gauche.</value>
+  </data>
+  <data name="NeedsElevationBadge.Text" xml:space="preserve">
+    <value>droits administrateur requis</value>
+  </data>
+  <data name="ParametersHeader.Text" xml:space="preserve">
+    <value>Paramètres</value>
+  </data>
+  <data name="ExecuteButton.Content" xml:space="preserve">
+    <value>Exécuter</value>
+  </data>
+  <data name="DrivePicker.PlaceholderText" xml:space="preserve">
+    <value>Aucun disque disponible</value>
+  </data>
+  <data name="AboutDialog.Title" xml:space="preserve">
+    <value>À propos de WinEvo</value>
+  </data>
+  <data name="AboutDialog.CloseButtonText" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="AboutTagline.Text" xml:space="preserve">
+    <value>Un optimiseur open source pour Windows 11.</value>
+  </data>
+  <data name="AboutLicenseHeader.Text" xml:space="preserve">
+    <value>Licence</value>
+  </data>
+  <data name="AboutLicenseBody.Text" xml:space="preserve">
+    <value>Publié sous la licence publique générale GNU v3.0 ou ultérieure.</value>
+  </data>
+  <data name="AboutPrivacyHeader.Text" xml:space="preserve">
+    <value>Confidentialité</value>
+  </data>
+  <data name="AboutPrivacyBody.Text" xml:space="preserve">
+    <value>Fonctionne entièrement sur votre ordinateur. Aucune télémétrie, aucun compte, aucun appel réseau.</value>
+  </data>
+  <data name="AboutPrivacyLink.Content" xml:space="preserve">
+    <value>Politique de confidentialité</value>
+  </data>
+  <data name="AboutLicenseLink.Content" xml:space="preserve">
+    <value>Licence</value>
+  </data>
+  <data name="About_Version" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="ConfirmationDialog.CloseButtonText" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="AcknowledgeCheckbox.Content" xml:space="preserve">
+    <value>Je comprends les conséquences.</value>
+  </data>
+  <data name="TypedPhraseInput.PlaceholderText" xml:space="preserve">
+    <value>Saisissez ici</value>
+  </data>
+  <data name="Confirm_Continue" xml:space="preserve">
+    <value>Continuer</value>
+  </data>
+  <data name="Confirm_RunAnyway" xml:space="preserve">
+    <value>Exécuter quand même</value>
+  </data>
+  <data name="Confirm_TypeActionName" xml:space="preserve">
+    <value>Pour confirmer, saisissez exactement le nom de l'action : {0}</value>
+  </data>
+  <data name="Severity_Info" xml:space="preserve">
+    <value>Information</value>
+  </data>
+  <data name="Severity_Warning" xml:space="preserve">
+    <value>Avertissement</value>
+  </data>
+  <data name="Severity_Danger" xml:space="preserve">
+    <value>Action destructive</value>
+  </data>
+  <data name="Severity_Critical" xml:space="preserve">
+    <value>Critique - irréversible</value>
+  </data>
+  <data name="CloseWhileRunning_Title" xml:space="preserve">
+    <value>Action en cours</value>
+  </data>
+  <data name="CloseWhileRunning_Content" xml:space="preserve">
+    <value>Une action est toujours en cours. Fermer l'application l'interrompra et peut laisser le système dans un état incomplet. Continuer ?</value>
+  </data>
+  <data name="CloseWhileRunning_Stop" xml:space="preserve">
+    <value>Arrêter et fermer</value>
+  </data>
+  <data name="CloseWhileRunning_Keep" xml:space="preserve">
+    <value>Laisser en cours</value>
+  </data>
+</root>

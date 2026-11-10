@@ -1,19 +1,15 @@
-using System.Text.Json;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations;
 
 /// <summary>
-/// Deletes a registry value or a registry key (subtree). Manifest shapes:
+/// Deletes a registry value or a registry key (subtree):
 /// <code>
 /// // Delete a single value:
-/// { "operation": "registry-delete",
-///   "key": "HKCU\\Software\\Foo",
-///   "value": "MyValue" }
+/// new RegistryDeleteOperation { Key = @"HKCU\Software\Foo", ValueName = "MyValue" }
 ///
 /// // Delete a key and everything under it:
-/// { "operation": "registry-delete",
-///   "key": "HKCU\\Software\\Foo" }
+/// new RegistryDeleteOperation { Key = @"HKCU\Software\Foo" }
 /// </code>
 /// When <see cref="ValueName"/> is present (even as an empty string — the
 /// default-value slot), only that value is removed. When it's <see langword="null"/>,
@@ -29,35 +25,20 @@ public sealed class RegistryDeleteOperation : ActionOperation
     /// <summary>Name of the value to delete. <see langword="null"/> means "delete the whole key tree."</summary>
     public string? ValueName { get; init; }
 
-    public static RegistryDeleteOperation FromJson(JsonElement properties)
-    {
-        if (!properties.TryGetProperty("key", out var keyProp) || keyProp.ValueKind != JsonValueKind.String)
-            throw new JsonException("registry-delete: missing or non-string 'key' property");
-        return new RegistryDeleteOperation
-        {
-            Key = keyProp.GetString()!,
-            ValueName = properties.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.String
-                ? v.GetString()
-                : null,
-        };
-    }
-
     public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
     {
         try
         {
-            var keyPath = RenderProperty(Key, context);
-            if (string.IsNullOrWhiteSpace(keyPath))
-                return Task.FromResult(OperationResult.Fail("missing 'key' property"));
+            if (string.IsNullOrWhiteSpace(Key))
+                return Task.FromResult(OperationResult.Fail("empty key path"));
 
-            var (hiveName, subkeyPath) = RegistryPath.SplitHive(keyPath);
+            var (hiveName, subkeyPath) = RegistryPath.SplitHive(Key);
             var root = RegistryPath.ResolveHive(hiveName);
             if (root is null)
-                return Task.FromResult(OperationResult.Fail($"unknown hive '{hiveName}' in key path '{keyPath}'"));
+                return Task.FromResult(OperationResult.Fail($"unknown hive '{hiveName}' in key path '{Key}'"));
 
             if (ValueName is not null)
             {
-                var valueName = RenderProperty(ValueName, context);
                 if (string.IsNullOrEmpty(subkeyPath))
                     return Task.FromResult(OperationResult.Fail($"cannot delete values from hive root '{hiveName}'"));
 
@@ -65,11 +46,11 @@ public sealed class RegistryDeleteOperation : ActionOperation
                 if (key is null)
                 {
                     context.Log($"key {hiveName}\\{subkeyPath} not present; nothing to delete");
-                    return Task.FromResult(OperationResult.Ok($"{hiveName}\\{subkeyPath}\\{valueName} already absent"));
+                    return Task.FromResult(OperationResult.Ok($"{hiveName}\\{subkeyPath}\\{ValueName} already absent"));
                 }
-                key.DeleteValue(valueName, throwOnMissingValue: false);
-                context.Log($"deleted value {hiveName}\\{subkeyPath}\\{valueName}");
-                return Task.FromResult(OperationResult.Ok($"{hiveName}\\{subkeyPath}\\{valueName} deleted"));
+                key.DeleteValue(ValueName, throwOnMissingValue: false);
+                context.Log($"deleted value {hiveName}\\{subkeyPath}\\{ValueName}");
+                return Task.FromResult(OperationResult.Ok($"{hiveName}\\{subkeyPath}\\{ValueName} deleted"));
             }
 
             if (string.IsNullOrEmpty(subkeyPath))

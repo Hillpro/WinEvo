@@ -1,9 +1,12 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.AppLifecycle;
+using Microsoft.Windows.Globalization;
+using WinEvo.Actions;
 using WinEvo.Shell.Core;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels;
@@ -20,6 +23,8 @@ public partial class App : Application
 {
     private AgentLauncher? _agentLauncher;
     private MainWindow? _window;
+
+    private const string LanguageOverrideVariable = "WINEVO_LANGUAGE";
 
     private bool _teardownStarted;
     private bool _teardownCompleted;
@@ -38,7 +43,40 @@ public partial class App : Application
 
         ShellLog.Write($"shell starting (log: {ShellLog.FilePath})");
 
+        // Before InitializeComponent: XAML text is resolved as it is loaded.
+        UseOneDisplayLanguage();
+
         InitializeComponent();
+    }
+
+    /// <summary>
+    /// Makes every piece of text in the window follow the same language: the
+    /// user's Windows display language, <see cref="CultureInfo.CurrentUICulture"/>.
+    /// The <c>.resx</c> text (actions, view models) uses it natively. The XAML
+    /// text (<c>.resw</c>) is resolved by a separate Windows component that, in
+    /// an unpackaged app, looks at the system display language instead, so it
+    /// is told explicitly which language to use.
+    /// </summary>
+    private static void UseOneDisplayLanguage()
+    {
+        // Lets a developer or a tester see another language without changing
+        // the Windows display language, e.g. WINEVO_LANGUAGE=fr.
+        var requested = Environment.GetEnvironmentVariable(LanguageOverrideVariable);
+        if (!string.IsNullOrWhiteSpace(requested))
+        {
+            try
+            {
+                var culture = CultureInfo.GetCultureInfo(requested);
+                CultureInfo.CurrentUICulture = culture;
+                CultureInfo.DefaultThreadCurrentUICulture = culture;
+            }
+            catch (CultureNotFoundException)
+            {
+                ShellLog.Write($"ignoring {LanguageOverrideVariable}='{requested}': not a known language");
+            }
+        }
+
+        ApplicationLanguages.PrimaryLanguageOverride = CultureInfo.CurrentUICulture.Name;
     }
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
@@ -54,26 +92,26 @@ public partial class App : Application
         SynchronizationContext.SetSynchronizationContext(
             new DispatcherQueueSynchronizationContext(dispatcherQueue));
 
-        var catalog = new ActionCatalog(ActionCatalog.ResolveDefaultRoot());
         _agentLauncher = new AgentLauncher(AgentLauncher.ResolveDefaultAgentPath());
-        var strings = new StringBundle(StringBundle.ResolveDefaultRoot());
 
         // Lazy XamlRoot capture: the lambda reads _window at call time, not at
         // construction time
         var confirmation = new ConfirmationDialogService(() => _window?.Content.XamlRoot);
 
-        var stateLoader = new AgentParameterStateLoader(_agentLauncher);
-        var parameterFactory = new ParameterInputFactory(new SystemDriveProvider(), stateLoader, dispatcherQueue);
+        // All text follows the user's Windows display language and falls back
+        // to English for languages without a translation.
+        var culture = CultureInfo.CurrentUICulture;
+        var parameterFactory = new ParameterInputFactory(new SystemDriveProvider(culture));
 
-        // TODO: detect system language / user preference instead of hard-coding English.
         var viewModel = new MainViewModel(
-            catalog, _agentLauncher, language: "en", dispatcherQueue, confirmation, strings, parameterFactory);
+            new CoreActionCatalog(), _agentLauncher, culture,
+            dispatcherQueue, confirmation, parameterFactory);
 
         _window = new MainWindow(viewModel);
         _window.AppWindow.Closing += OnAppWindowClosing;
         _window.Activate();
 
-        // Kick off catalog + agent startup on the UI dispatcher so the VM's
+        // Kick off agent startup on the UI dispatcher so the VM's
         // UI-touching updates run on the correct thread.
         dispatcherQueue.TryEnqueue(async () =>
         {
@@ -131,11 +169,10 @@ public partial class App : Application
     {
         var dialog = new ContentDialog
         {
-            Title = "Action in progress",
-            Content = "An action is still running. Closing will stop the agent and "
-                    + "may leave the system in a partial state. Continue?",
-            PrimaryButtonText = "Stop and close",
-            CloseButtonText = "Keep running",
+            Title = DialogText.Get("CloseWhileRunning_Title"),
+            Content = DialogText.Get("CloseWhileRunning_Content"),
+            PrimaryButtonText = DialogText.Get("CloseWhileRunning_Stop"),
+            CloseButtonText = DialogText.Get("CloseWhileRunning_Keep"),
             DefaultButton = ContentDialogButton.Close,
             // XamlRoot is required for ContentDialog in a WinUI 3 desktop app;
             // without it the dialog fails to present and ShowAsync throws.

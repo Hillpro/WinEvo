@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AboutButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>About WinEvo</value>
+  </data>
+  <data name="AboutButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>About WinEvo</value>
+  </data>
+  <data name="SelectActionHint.Text" xml:space="preserve">
+    <value>Select an action on the left.</value>
+  </data>
+  <data name="NeedsElevationBadge.Text" xml:space="preserve">
+    <value>needs elevation</value>
+  </data>
+  <data name="ParametersHeader.Text" xml:space="preserve">
+    <value>Parameters</value>
+  </data>
+  <data name="ExecuteButton.Content" xml:space="preserve">
+    <value>Execute</value>
+  </data>
+  <data name="DrivePicker.PlaceholderText" xml:space="preserve">
+    <value>No drives available</value>
+  </data>
+  <data name="AboutDialog.Title" xml:space="preserve">
+    <value>About WinEvo</value>
+  </data>
+  <data name="AboutDialog.CloseButtonText" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AboutTagline.Text" xml:space="preserve">
+    <value>An open-source Windows 11 optimizer.</value>
+  </data>
+  <data name="AboutLicenseHeader.Text" xml:space="preserve">
+    <value>License</value>
+  </data>
+  <data name="AboutLicenseBody.Text" xml:space="preserve">
+    <value>Released under the GNU General Public License v3.0 or later.</value>
+  </data>
+  <data name="AboutPrivacyHeader.Text" xml:space="preserve">
+    <value>Privacy</value>
+  </data>
+  <data name="AboutPrivacyBody.Text" xml:space="preserve">
+    <value>Runs entirely on your computer. No telemetry, no accounts, no network calls.</value>
+  </data>
+  <data name="AboutPrivacyLink.Content" xml:space="preserve">
+    <value>Privacy policy</value>
+  </data>
+  <data name="AboutLicenseLink.Content" xml:space="preserve">
+    <value>License</value>
+  </data>
+  <data name="About_Version" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="ConfirmationDialog.CloseButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AcknowledgeCheckbox.Content" xml:space="preserve">
+    <value>I understand the consequences.</value>
+  </data>
+  <data name="TypedPhraseInput.PlaceholderText" xml:space="preserve">
+    <value>Type here</value>
+  </data>
+  <data name="Confirm_Continue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="Confirm_RunAnyway" xml:space="preserve">
+    <value>Run anyway</value>
+  </data>
+  <data name="Confirm_TypeActionName" xml:space="preserve">
+    <value>To confirm, type the action name exactly: {0}</value>
+  </data>
+  <data name="Severity_Info" xml:space="preserve">
+    <value>Information</value>
+  </data>
+  <data name="Severity_Warning" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="Severity_Danger" xml:space="preserve">
+    <value>Destructive action</value>
+  </data>
+  <data name="Severity_Critical" xml:space="preserve">
+    <value>Critical - irreversible</value>
+  </data>
+  <data name="CloseWhileRunning_Title" xml:space="preserve">
+    <value>Action in progress</value>
+  </data>
+  <data name="CloseWhileRunning_Content" xml:space="preserve">
+    <value>An action is still running. Closing will stop the agent and may leave the system in a partial state. Continue?</value>
+  </data>
+  <data name="CloseWhileRunning_Stop" xml:space="preserve">
+    <value>Stop and close</value>
+  </data>
+  <data name="CloseWhileRunning_Keep" xml:space="preserve">
+    <value>Keep running</value>
+  </data>
+</root>

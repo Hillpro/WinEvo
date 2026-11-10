@@ -22,6 +22,7 @@
             <TextBlock Grid.Column="0"
                        Text="WinEvo" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
             <Button Grid.Column="1"
+                    x:Uid="AboutButton"
                     Click="OnAboutClick"
                     ToolTipService.ToolTip="About WinEvo"
                     Padding="8,4"
@@ -48,7 +49,7 @@
                         <DataTemplate x:DataType="vm:ActionItemViewModel">
                             <StackPanel Padding="4" Spacing="2">
                                 <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" />
-                                <TextBlock Text="{x:Bind Category}" Opacity="0.6" FontSize="12" />
+                                <TextBlock Text="{x:Bind DisplayCategory}" Opacity="0.6" FontSize="12" />
                                 <TextBlock Text="{x:Bind DisplayDescription}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" MaxLines="2" />
                             </StackPanel>
                         </DataTemplate>
@@ -60,6 +61,7 @@
             <ScrollViewer Grid.Column="1" Padding="24">
                 <StackPanel Spacing="16">
                     <TextBlock
+                        x:Uid="SelectActionHint"
                         Text="Select an action on the left."
                         Visibility="{x:Bind DetailInverseVisibility(ViewModel.Detail), Mode=OneWay}"
                         Opacity="0.6" />
@@ -78,14 +80,14 @@
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                     CornerRadius="4" Padding="6,2">
                                     <TextBlock
-                                        Text="{x:Bind ViewModel.Detail.Item.Category, Mode=OneWay, FallbackValue=''}"
+                                        Text="{x:Bind ViewModel.Detail.Item.DisplayCategory, Mode=OneWay, FallbackValue=''}"
                                         FontSize="12" />
                                 </Border>
                                 <Border
                                     Background="{ThemeResource SystemFillColorCautionBrush}"
                                     CornerRadius="4" Padding="6,2"
                                     Visibility="{x:Bind ElevationVisibility(ViewModel.Detail), Mode=OneWay}">
-                                    <TextBlock Text="needs elevation" FontSize="12" Foreground="White" />
+                                    <TextBlock x:Uid="NeedsElevationBadge" Text="needs elevation" FontSize="12" Foreground="White" />
                                 </Border>
                             </StackPanel>
                         </StackPanel>

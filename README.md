@@ -5,16 +5,16 @@
 [![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-0078D6.svg?logo=windows&logoColor=white)](#requirements)
 
-An open-source optimizer and tweaker for Windows 11, built as a WinUI 3 application with an elevated agent for privileged operations. Community-extensible via JSON action manifests.
+An open-source optimizer and tweaker for Windows 11, built as a WinUI 3 application with an elevated agent for privileged operations.
 
 ## Status
 
-🚧 **Alpha (0.1.1, portable-only).** End-to-end works: Shell launches, spawns the agent broker, elevates on demand via UAC, and executes actions with a severity-gated confirmation dialog. Nine operations are wired (`registry-set`, `registry-delete`, `registry-read`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`); the live schema is trimmed to those. Roadmap operations (`service-*`, `file-*`, `system-restore-point`, `sysinternals-tool`) and target manifest features (undo, dry-run, preconditions, sub-actions, restore points, progress streaming) are tracked in [docs/manifest-reference/](docs/manifest-reference/). Spawned children are kept under a Windows Job Object so they die with the agent. IPC is length-prefixed JSON over a named pipe; gRPC (`.proto` already defined) is the target transport.
+🚧 **Alpha, portable-only.** End-to-end works: the Shell launches, spawns the agent broker, elevates on demand via UAC, and runs actions behind a severity-gated confirmation dialog. Actions are C# classes compiled into the app; the agent runs only the actions it ships, selected by id. Eight operations are wired (`registry-set`, `registry-delete`, `process-kill`, `external-process`, `builtin-tool`, `powershell`, `command`, `delay`). Not implemented yet: undo, dry-run, restore points, progress streaming, the planned operations (`service-*`, `file-*`, `system-restore-point`, `sysinternals-tool`), and actions supplied by third parties; see [docs/action-authoring.md](docs/action-authoring.md). Spawned children are kept under a Windows Job Object so they die with the agent. IPC is length-prefixed JSON over a named pipe; gRPC (`.proto` already defined) is the target transport.
 
 ## Goals
 
 - Consolidate the tweaks, cleanups, and scripts Windows power users run manually into one polished app.
-- Let the community add new actions via JSON/YAML manifests without recompiling.
+- Keep an action cheap to write: one small C# class composed from a closed, reviewed set of operations.
 - Run the UI unprivileged; elevate only when an action requires it, via an on-demand broker or an installed service (user choice).
 - Ship as a portable/unpackaged zip, with a signed installer planned alongside it ([docs/distribution.md](docs/distribution.md)).
 
@@ -57,7 +57,6 @@ Shell ⇄ Agent over a named pipe (length-prefixed JSON today; gRPC `.proto` def
 
 - `src/` — all C#/WiX projects.
 - `tests/` — unit test projects.
-- `actions/` — built-in JSON action manifests + JSON Schema.
 - `docs/` — architecture, action-authoring guide, IPC contract, security model (each doc carries its own `*(not implemented yet)*` markers where relevant).
 - `AUTHORS`, `LICENSE` — authorship and GPLv3 text.
 
@@ -70,6 +69,8 @@ dotnet test    WinEvo.slnx
 dotnet run --project src/WinEvo.Shell     # or F5 in Visual Studio
 ```
 
+The window is shown in the Windows display language; English and French are available, and any other language falls back to English. To try a language without changing Windows, set `WINEVO_LANGUAGE` before launching (PowerShell: `$env:WINEVO_LANGUAGE = 'fr'`).
+
 Agent diagnostic log: `%LOCALAPPDATA%\WinEvo\agent.log` (startup events, pipe-security outcomes, unhandled exceptions — essential for elevated runs where the agent has no visible stdio). The Shell logs alongside it as `shell.log` in the same folder.
 
 ### Release publish
@@ -77,8 +78,10 @@ Agent diagnostic log: `%LOCALAPPDATA%\WinEvo\agent.log` (startup events, pipe-se
 ```bash
 # Portable, self-contained: bundles .NET + WinAppSDK runtimes
 # Output: src/WinEvo.Shell/bin/Release/net10.0-windows10.0.22000.0/win-x64/publish/
-dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64
+dotnet publish src/WinEvo.Shell -p:PublishProfile=Portable-win-x64 -p:SelfContained=true -p:RuntimeIdentifier=win-x64
 ```
+
+The two `-p:` properties after the profile are required: they are what makes the agent, not only the Shell, carry its own .NET runtime. Without them the publish stops with an error instead of producing a zip that only works where .NET is installed.
 
 This uses the `Portable-win-x64` publish profile in [src/WinEvo.Shell/Properties/PublishProfiles/](src/WinEvo.Shell/Properties/PublishProfiles/), and the output runs on a clean Windows 11 22000+ machine without any prerequisite installs.
 
@@ -107,8 +110,7 @@ WinEvo/
 ├── WinEvo.exe              # the UI; launch this
 ├── agent/                  # privileged helper, spawned on demand
 │   └── WinEvo.Agent.exe
-├── actions/                # shipped JSON action manifests
-├── resources/              # i18n string bundles
+├── fr/                     # French text of the actions
 └── (.NET and WinAppSDK runtimes — bundled; no separate installs needed)
 ```
 
@@ -116,7 +118,9 @@ WinEvo/
 
 ## Contributing actions
 
-Drop a JSON manifest in the appropriate `actions/<category>/` folder. Live (alpha-trimmed) schema at [actions/schemas/action.schema.json](actions/schemas/action.schema.json); the long-term target shape — including features the engine doesn't consume yet — lives at [docs/manifest-reference/](docs/manifest-reference/). Authoring guide: [docs/action-authoring.md](docs/action-authoring.md). New operation types require a code-level PR and review.
+An action is a C# class in [src/WinEvo.Actions/](src/WinEvo.Actions/), with its English and French text in the two `.resx` files next to it and one line in `CoreActionCatalog`. The authoring guide is [docs/action-authoring.md](docs/action-authoring.md). Adding a new operation type is a separate, more heavily reviewed change, described in the same guide.
+
+Actions cannot be added without rebuilding WinEvo today.
 
 ## License
 

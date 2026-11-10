@@ -5,8 +5,4 @@
     <RootNamespace>WinEvo.Actions.Abstractions</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\WinEvo.ActionModel\WinEvo.ActionModel.csproj" />
-  </ItemGroup>
-
 </Project>
