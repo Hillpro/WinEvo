@@ -1,5 +1,3 @@
-using System.Text.Json;
-using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Tests;
@@ -29,8 +27,8 @@ public class CoreActionsTests
         Assert.Equal(ElevationRequirement.Required, descriptor.Elevation);
         Assert.Equal(InteractionMode.Button, descriptor.Interaction);
         Assert.Equal(
-            [("storage.wipe.longRunning", WarningSeverity.Warning), ("storage.wipe.destructiveHint", WarningSeverity.Info)],
-            descriptor.Warnings.Select(warning => (warning.Key, warning.Severity)));
+            [WarningSeverity.Warning, WarningSeverity.Info],
+            descriptor.Warnings.Select(warning => warning.Severity));
     }
 
     [Fact]
@@ -44,6 +42,6 @@ public class CoreActionsTests
 
         var isOn = Assert.IsType<BooleanParameter>(Assert.Single(descriptor.Parameters));
         Assert.Equal(ToggleActionDefinition.IsOnParameterId, isOn.Id);
-        Assert.Equal(JsonValueKind.True, isOn.Default?.ValueKind);
+        Assert.True(isOn.Default);
     }
 }

@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-
 namespace WinEvo.Actions.Abstractions;
 
 /// <summary>
@@ -60,11 +58,7 @@ public sealed class ActionExecution
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var context = new OperationContext
-        {
-            Parameters = ReadOnlyDictionary<string, object?>.Empty,
-            LogSink = line => Log($"[{operation.Id}] {line}"),
-        };
+        var context = new OperationContext { LogSink = line => Log($"[{operation.Id}] {line}") };
 
         OperationResult result;
         try

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Win32;
 
 namespace WinEvo.Actions.Operations.Tests;
@@ -100,13 +99,5 @@ public sealed class RegistryDeleteOperationTests : IDisposable
 
         Assert.False(result.Success);
         Assert.Contains("unknown hive", result.Error);
-    }
-
-    [Fact]
-    public void Missing_key_property_fails_at_parse_time()
-    {
-        var ex = Assert.Throws<JsonException>(() => RegistryDeleteOperation.FromJson(
-            JsonDocument.Parse("""{}""").RootElement.Clone()));
-        Assert.Contains("missing", ex.Message);
     }
 }

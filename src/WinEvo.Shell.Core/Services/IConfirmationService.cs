@@ -1,4 +1,4 @@
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Shell.Core.Services;
 

@@ -1,23 +1,19 @@
 using System.Diagnostics;
-using System.Text.Json;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations;
 
 /// <summary>
-/// Runs a built-in OS tool under <c>%SystemRoot%\System32</c>. Manifest shape:
+/// Runs a built-in OS tool under <c>%SystemRoot%\System32</c>:
 /// <code>
-/// { "operation": "builtin-tool",
-///   "name": "cipher",
-///   "args": ["/w:{{params.drive}}"],
-///   "timeout": 60 }
+/// new BuiltinToolOperation { Name = "cipher", Args = [$"/w:{drive}"] }
 /// </code>
-/// A narrowed alias of <c>external-process</c>: same argv-style dispatch, but
-/// the caller only supplies a tool name. Path separators, drive letters, and
-/// parent-directory traversals are rejected; the file is always resolved
-/// against <see cref="Environment.SystemDirectory"/>. Prefer this for
-/// <c>cipher</c>, <c>sc</c>, <c>ipconfig</c>, etc. — the manifest's intent is
-/// clearer and the resolution is audit-friendly.
+/// A narrowed form of <see cref="ExternalProcessOperation"/>: same argv-style
+/// dispatch, but the caller only supplies a tool name. Path separators, drive
+/// letters, and parent-directory traversals are rejected; the file is always
+/// resolved against <see cref="Environment.SystemDirectory"/>. Prefer this for
+/// <c>cipher</c>, <c>sc</c>, <c>ipconfig</c>, etc.: the intent is clearer
+/// and the resolution is audit-friendly.
 /// </summary>
 public sealed class BuiltinToolOperation : ActionOperation
 {
@@ -27,25 +23,15 @@ public sealed class BuiltinToolOperation : ActionOperation
 
     public required string Name { get; init; }
     public IReadOnlyList<string> Args { get; init; } = [];
-    public int? TimeoutSeconds { get; init; }
 
-    public static BuiltinToolOperation FromJson(JsonElement properties)
-    {
-        if (!properties.TryGetProperty("name", out var nameProp) || nameProp.ValueKind != JsonValueKind.String)
-            throw new JsonException("builtin-tool: missing or non-string 'name' property");
-        return new BuiltinToolOperation
-        {
-            Name = nameProp.GetString()!,
-            Args = ExternalProcessOperation.ParseArgs(properties),
-            TimeoutSeconds = ExternalProcessOperation.ParseTimeout(properties),
-        };
-    }
+    /// <summary><see langword="null"/> lets the tool run as long as it needs.</summary>
+    public int? TimeoutSeconds { get; init; }
 
     public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
     {
-        var name = RenderProperty(Name, context).Trim();
+        var name = Name.Trim();
         if (string.IsNullOrEmpty(name))
-            return Task.FromResult(OperationResult.Fail("missing 'name' property"));
+            return Task.FromResult(OperationResult.Fail("empty tool name"));
 
         if (name.IndexOfAny(s_forbiddenChars) >= 0 || name.Contains("..", StringComparison.Ordinal))
             return Task.FromResult(OperationResult.Fail(
@@ -58,7 +44,7 @@ public sealed class BuiltinToolOperation : ActionOperation
 
         var psi = new ProcessStartInfo { FileName = fullPath };
         foreach (var arg in Args)
-            psi.ArgumentList.Add(RenderProperty(arg, context));
+            psi.ArgumentList.Add(arg);
 
         return ProcessRunner.RunAsync(psi, TimeoutSeconds, context, cancellationToken);
     }

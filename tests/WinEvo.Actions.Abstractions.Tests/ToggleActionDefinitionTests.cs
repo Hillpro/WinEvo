@@ -1,6 +1,5 @@
 using System.Globalization;
-using System.Text.Json;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Abstractions.Tests;
 
@@ -15,7 +14,7 @@ public class ToggleActionDefinitionTests
         var parameter = Assert.IsType<BooleanParameter>(Assert.Single(action.Descriptor.Parameters));
         Assert.Equal(ToggleActionDefinition.IsOnParameterId, parameter.Id);
         Assert.Equal("Switch label", parameter.Name?.Resolve(CultureInfo.InvariantCulture));
-        Assert.Equal(JsonValueKind.True, parameter.Default?.ValueKind);
+        Assert.True(parameter.Default);
     }
 
     [Fact]
@@ -32,7 +31,7 @@ public class ToggleActionDefinitionTests
     {
         var withParameter = FakeToggle.Identity with
         {
-            Parameters = [new StringParameter { Id = "extra", Type = "string" }],
+            Parameters = [new StringParameter { Id = "extra" }],
         };
 
         var thrown = Assert.Throws<ArgumentException>(() => new FakeToggle(currentlyOn: null, descriptor: withParameter));

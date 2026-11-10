@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Shell.Core.ViewModels;
 
@@ -9,7 +9,7 @@ namespace WinEvo.Shell.Core.ViewModels;
 /// Base for a single action parameter's input VM. Concrete subclasses own the
 /// type-specific storage and widget-binding surface; a
 /// <see cref="Services.IParameterInputFactory"/> picks the right subclass per
-/// <see cref="Parameter.Type"/>. Matching <c>DataTemplate</c>s in the Shell are
+/// <see cref="Parameter"/> subclass. Matching <c>DataTemplate</c>s in the Shell are
 /// selected at render time by <c>ParameterInputTemplateSelector</c>.
 /// </summary>
 public abstract class ParameterInputViewModel : ObservableObject

@@ -1,15 +1,14 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Shell.Core.ViewModels;
 
 /// <summary>
 /// Picker for <see cref="EnumParameter"/> — renders as a <c>ComboBox</c> of
-/// the manifest's <see cref="EnumParameter.Choices"/>. The emitted value is
+/// the parameter's <see cref="EnumParameter.Choices"/>. The emitted value is
 /// the selected choice string.
 /// </summary>
 public sealed partial class EnumParameterInputViewModel : ParameterInputViewModel
@@ -19,10 +18,7 @@ public sealed partial class EnumParameterInputViewModel : ParameterInputViewMode
     {
         Choices = new ObservableCollection<string>(parameter.Choices);
 
-        var preferred = parameter.Default is { } def && def.ValueKind == JsonValueKind.String
-            ? def.GetString()
-            : null;
-        SelectedChoice = preferred is not null && Choices.Contains(preferred)
+        SelectedChoice = parameter.Default is { } preferred && Choices.Contains(preferred)
             ? preferred
             : Choices.FirstOrDefault();
     }

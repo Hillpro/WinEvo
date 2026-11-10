@@ -1,5 +1,5 @@
 using System.Resources;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions;
 

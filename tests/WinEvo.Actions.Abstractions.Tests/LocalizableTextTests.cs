@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Resources;
 
-namespace WinEvo.ActionModel.Tests;
+namespace WinEvo.Actions.Abstractions.Tests;
 
 /// <summary>
 /// Resolves against <c>LocalizableTextTestStrings.resx</c> (neutral, English)
@@ -11,7 +11,7 @@ namespace WinEvo.ActionModel.Tests;
 public class LocalizableTextTests
 {
     private static readonly ResourceManager s_resources = new(
-        "WinEvo.ActionModel.Tests.LocalizableTextTestStrings",
+        "WinEvo.Actions.Abstractions.Tests.LocalizableTextTestStrings",
         typeof(LocalizableTextTests).Assembly);
 
     [Fact]

@@ -1,5 +1,5 @@
 using System.Globalization;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 using WinEvo.Shell.Core.ViewModels;
 
 namespace WinEvo.Shell.Core.Services;
@@ -26,6 +26,8 @@ public sealed class ParameterInputFactory : IParameterInputFactory
             IntegerParameter ip => new IntegerParameterInputViewModel(ip, culture),
             BooleanParameter bp => new BooleanParameterInputViewModel(bp, culture),
             EnumParameter ep => new EnumParameterInputViewModel(ep, culture),
-            _ => new StringParameterInputViewModel(parameter, culture),
+            StringParameter sp => new StringParameterInputViewModel(sp, culture),
+            _ => throw new NotSupportedException(
+                $"no input is registered for parameter type {parameter.GetType().Name} ('{parameter.Id}')"),
         };
 }

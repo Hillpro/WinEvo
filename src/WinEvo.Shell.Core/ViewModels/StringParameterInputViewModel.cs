@@ -1,26 +1,22 @@
 using System.Globalization;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Shell.Core.ViewModels;
 
 /// <summary>
-/// Picker for <see cref="StringParameter"/> — the fallback shape for every
-/// parameter type that doesn't (yet) have a dedicated widget. Renders as a
-/// TextBox; emits the raw string. Types like <c>wifi-profile</c>,
-/// <c>file-path</c>, and <c>service-name</c> land here today and should move
-/// to their own subclass once a proper picker ships.
+/// Picker for <see cref="StringParameter"/>: renders as a TextBox and emits
+/// the raw string. Inputs that deserve a dedicated picker (a wifi profile, a
+/// file path, a service name) get their own <see cref="Parameter"/> subclass
+/// and view model when that picker ships.
 /// </summary>
 public sealed partial class StringParameterInputViewModel : ParameterInputViewModel
 {
-    public StringParameterInputViewModel(Parameter parameter, CultureInfo culture)
+    public StringParameterInputViewModel(StringParameter parameter, CultureInfo culture)
         : base(parameter, culture)
     {
-        Value = parameter.Default is { } def && def.ValueKind == JsonValueKind.String
-            ? def.GetString() ?? ""
-            : "";
+        Value = parameter.Default ?? "";
     }
 
     [ObservableProperty]

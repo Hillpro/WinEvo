@@ -1,6 +1,5 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/WinEvo.ActionModel/WinEvo.ActionModel.csproj" />
     <Project Path="src/WinEvo.Actions.Abstractions/WinEvo.Actions.Abstractions.csproj" />
     <Project Path="src/WinEvo.Actions/WinEvo.Actions.csproj" />
     <Project Path="src/WinEvo.Actions.Operations/WinEvo.Actions.Operations.csproj" />
@@ -14,7 +13,6 @@
     <Project Path="src/WinEvo.Tray/WinEvo.Tray.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/WinEvo.ActionModel.Tests/WinEvo.ActionModel.Tests.csproj" />
     <Project Path="tests/WinEvo.Actions.Abstractions.Tests/WinEvo.Actions.Abstractions.Tests.csproj" />
     <Project Path="tests/WinEvo.Actions.Tests/WinEvo.Actions.Tests.csproj" />
     <Project Path="tests/WinEvo.Actions.Operations.Tests/WinEvo.Actions.Operations.Tests.csproj" />

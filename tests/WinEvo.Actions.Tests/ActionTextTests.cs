@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Globalization;
 using System.Resources;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Tests;
 

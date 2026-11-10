@@ -3,7 +3,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels.Interactions;
 

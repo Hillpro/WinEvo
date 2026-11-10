@@ -1,4 +1,3 @@
-using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
 using WinEvo.Actions.Operations;
 
@@ -27,13 +26,11 @@ public sealed class WipeFreeSpaceAction : ActionDefinition
             new ActionWarning
             {
                 Severity = WarningSeverity.Warning,
-                Key = "storage.wipe.longRunning",
                 Message = ActionText.For("WipeFreeSpace_LongRunningWarning"),
             },
             new ActionWarning
             {
                 Severity = WarningSeverity.Info,
-                Key = "storage.wipe.destructiveHint",
                 Message = ActionText.For("WipeFreeSpace_DeletedFilesOnlyNote"),
             },
         ],
@@ -42,7 +39,6 @@ public sealed class WipeFreeSpaceAction : ActionDefinition
             new DriveParameter
             {
                 Id = DriveParameterId,
-                Type = "drive",
                 Name = ActionText.For("WipeFreeSpace_DriveLabel"),
                 Required = true,
                 AllowedDriveTypes = ["fixed", "removable"],

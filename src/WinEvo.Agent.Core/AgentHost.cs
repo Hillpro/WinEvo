@@ -2,7 +2,6 @@ using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
-using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
 using WinEvo.Ipc;
 

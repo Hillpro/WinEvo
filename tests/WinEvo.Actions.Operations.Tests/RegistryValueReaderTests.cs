@@ -3,7 +3,7 @@ using Microsoft.Win32;
 namespace WinEvo.Actions.Operations.Tests;
 
 /// <summary>
-/// Same sandbox pattern as <see cref="RegistryReadOperationTests"/>: a
+/// Same sandbox pattern as <see cref="RegistrySetOperationTests"/>: a
 /// throwaway key under <c>HKCU\Software\WinEvo.Tests.&lt;Guid&gt;</c>.
 /// </summary>
 public sealed class RegistryValueReaderTests : IDisposable

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Resources;
 
-namespace WinEvo.ActionModel;
+namespace WinEvo.Actions.Abstractions;
 
 /// <summary>
 /// User-facing text that is resolved to a concrete string only when the

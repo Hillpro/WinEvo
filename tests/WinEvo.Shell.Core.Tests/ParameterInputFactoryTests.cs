@@ -1,6 +1,5 @@
 using System.Globalization;
-using System.Text.Json;
-using WinEvo.ActionModel;
+using WinEvo.Actions.Abstractions;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels;
 
@@ -17,7 +16,7 @@ public class ParameterInputFactoryTests
         var factory = new ParameterInputFactory(drives);
 
         var vm = factory.Create(
-            new DriveParameter { Id = "drive", Type = "drive", Required = true, AllowedDriveTypes = ["fixed"] },
+            new DriveParameter { Id = "drive", Required = true, AllowedDriveTypes = ["fixed"] },
             culture: CultureInfo.InvariantCulture);
 
         var drive = Assert.IsType<DriveParameterInputViewModel>(vm);
@@ -30,7 +29,7 @@ public class ParameterInputFactoryTests
     public void Creates_integer_picker_for_IntegerParameter_with_min_max()
     {
         var vm = Factory().Create(
-            new IntegerParameter { Id = "n", Type = "integer", Required = true, Min = 1, Max = 10 },
+            new IntegerParameter { Id = "n", Required = true, Min = 1, Max = 10 },
             culture: CultureInfo.InvariantCulture);
 
         var integer = Assert.IsType<IntegerParameterInputViewModel>(vm);
@@ -43,9 +42,8 @@ public class ParameterInputFactoryTests
     [Fact]
     public void Integer_default_is_honored()
     {
-        using var doc = JsonDocument.Parse("5");
         var vm = (IntegerParameterInputViewModel)Factory().Create(
-            new IntegerParameter { Id = "n", Type = "integer", Default = doc.RootElement.Clone() },
+            new IntegerParameter { Id = "n", Default = 5 },
             culture: CultureInfo.InvariantCulture);
 
         Assert.True(vm.HasValue);
@@ -57,7 +55,7 @@ public class ParameterInputFactoryTests
     public void Creates_boolean_picker_for_BooleanParameter_always_has_value()
     {
         var vm = Factory().Create(
-            new BooleanParameter { Id = "b", Type = "boolean" },
+            new BooleanParameter { Id = "b" },
             culture: CultureInfo.InvariantCulture);
 
         var boolean = Assert.IsType<BooleanParameterInputViewModel>(vm);
@@ -70,7 +68,7 @@ public class ParameterInputFactoryTests
     public void Creates_enum_picker_for_EnumParameter_and_preselects_first_choice()
     {
         var vm = Factory().Create(
-            new EnumParameter { Id = "level", Type = "enum", Choices = ["low", "medium", "high"] },
+            new EnumParameter { Id = "level", Choices = ["low", "medium", "high"] },
             culture: CultureInfo.InvariantCulture);
 
         var enumVm = Assert.IsType<EnumParameterInputViewModel>(vm);
@@ -82,13 +80,12 @@ public class ParameterInputFactoryTests
     [Fact]
     public void Enum_default_picks_matching_choice()
     {
-        using var doc = JsonDocument.Parse("\"medium\"");
         var vm = (EnumParameterInputViewModel)Factory().Create(
             new EnumParameter
             {
-                Id = "level", Type = "enum",
+                Id = "level",
                 Choices = ["low", "medium", "high"],
-                Default = doc.RootElement.Clone(),
+                Default = "medium",
             },
             culture: CultureInfo.InvariantCulture);
 
@@ -96,22 +93,20 @@ public class ParameterInputFactoryTests
     }
 
     [Fact]
-    public void Falls_back_to_string_picker_for_StringParameter()
+    public void Creates_text_box_for_StringParameter()
     {
         var vm = Factory().Create(
-            new StringParameter { Id = "name", Type = "string" },
+            new StringParameter { Id = "name" },
             culture: CultureInfo.InvariantCulture);
 
         Assert.IsType<StringParameterInputViewModel>(vm);
     }
 
     [Fact]
-    public void Unknown_string_type_also_uses_string_picker()
+    public void String_input_emits_what_the_user_typed()
     {
-        // wifi-profile / file-path / service-name land on StringParameter today
-        // — they render as TextBoxes until a dedicated VM is added.
         var vm = Factory().Create(
-            new StringParameter { Id = "svc", Type = "service-name" },
+            new StringParameter { Id = "svc" },
             culture: CultureInfo.InvariantCulture);
 
         var str = Assert.IsType<StringParameterInputViewModel>(vm);
@@ -124,7 +119,7 @@ public class ParameterInputFactoryTests
     public void Drive_VM_reports_no_value_when_list_is_empty()
     {
         var vm = (DriveParameterInputViewModel)Factory().Create(
-            new DriveParameter { Id = "drive", Type = "drive" },
+            new DriveParameter { Id = "drive" },
             culture: CultureInfo.InvariantCulture);
 
         Assert.False(vm.HasValue);

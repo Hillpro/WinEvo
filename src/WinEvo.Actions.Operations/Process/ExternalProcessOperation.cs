@@ -1,17 +1,22 @@
 using System.Diagnostics;
-using System.Text.Json;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations;
 
 /// <summary>
-/// Runs an external executable with argv-style arguments. Manifest shape:
+/// Runs an external executable with argv-style arguments:
 /// <code>
-/// { "operation": "external-process",
-///   "path": "%SystemRoot%\\System32\\cipher.exe",
-///   "args": ["/w:{{params.drive}}"],
-///   "timeout": 60 }
+/// new ExternalProcessOperation
+/// {
+///     Path = @"%ProgramFiles%\Vendor\tool.exe",
+///     Args = ["/quiet", drive],
+///     TimeoutSeconds = 60,
+/// }
 /// </code>
+/// <c>%VARIABLE%</c> references in <see cref="Path"/> are expanded. Each entry
+/// of <see cref="Args"/> reaches the process as one argument, unparsed, so a
+/// value coming from user input cannot inject extra arguments. For a tool
+/// under System32, prefer <see cref="BuiltinToolOperation"/>.
 /// </summary>
 public sealed class ExternalProcessOperation : ActionOperation
 {
@@ -19,45 +24,20 @@ public sealed class ExternalProcessOperation : ActionOperation
 
     public required string Path { get; init; }
     public IReadOnlyList<string> Args { get; init; } = [];
-    public int? TimeoutSeconds { get; init; }
 
-    public static ExternalProcessOperation FromJson(JsonElement properties)
-    {
-        if (!properties.TryGetProperty("path", out var pathProp) || pathProp.ValueKind != JsonValueKind.String)
-            throw new JsonException("external-process: missing or non-string 'path' property");
-        return new ExternalProcessOperation
-        {
-            Path = pathProp.GetString()!,
-            Args = ParseArgs(properties),
-            TimeoutSeconds = ParseTimeout(properties),
-        };
-    }
+    /// <summary><see langword="null"/> lets the process run as long as it needs.</summary>
+    public int? TimeoutSeconds { get; init; }
 
     public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
     {
-        var path = RenderProperty(Path, context);
+        var path = Environment.ExpandEnvironmentVariables(Path);
         if (string.IsNullOrWhiteSpace(path))
-            return Task.FromResult(OperationResult.Fail("missing 'path' property"));
+            return Task.FromResult(OperationResult.Fail("empty executable path"));
 
         var psi = new ProcessStartInfo { FileName = path };
         foreach (var arg in Args)
-            psi.ArgumentList.Add(RenderProperty(arg, context));
+            psi.ArgumentList.Add(arg);
 
         return ProcessRunner.RunAsync(psi, TimeoutSeconds, context, cancellationToken);
     }
-
-    internal static string[] ParseArgs(JsonElement properties)
-    {
-        if (!properties.TryGetProperty("args", out var arr) || arr.ValueKind != JsonValueKind.Array)
-            return [];
-        return arr.EnumerateArray()
-            .Where(e => e.ValueKind == JsonValueKind.String)
-            .Select(e => e.GetString() ?? "")
-            .ToArray();
-    }
-
-    internal static int? ParseTimeout(JsonElement properties)
-        => properties.TryGetProperty("timeout", out var t) && t.ValueKind == JsonValueKind.Number
-            ? t.GetInt32()
-            : null;
 }

@@ -59,7 +59,7 @@
   <!-- Bring the Agent into the Shell's output under an agent\ subfolder. The
        two targets below cover both output paths: bin\ (dotnet build / run)
        and publish\ (dotnet publish). The subfolder layout dodges NETSDK1152
-       — the Agent and Shell.Core both reference ActionModel / Ipc /
+       — the Agent and the Shell both reference Actions / Ipc /
        Contracts, so a flat-merge collides on every shared transitive
        dependency.
 

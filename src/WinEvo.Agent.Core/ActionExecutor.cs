@@ -1,5 +1,4 @@
 using System.Text.Json;
-using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
 using WinEvo.Ipc;
 
@@ -86,9 +85,9 @@ public static class ActionExecutor
             {
                 result[p.Id] = ConvertToClr(supplied);
             }
-            else if (p.Default is { } def && def.ValueKind != JsonValueKind.Null)
+            else if (p.DefaultValue is { } declaredDefault)
             {
-                result[p.Id] = ConvertToClr(def);
+                result[p.Id] = declaredDefault;
             }
             else if (p.Required)
             {

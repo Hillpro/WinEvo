@@ -1,9 +1,10 @@
-namespace WinEvo.ActionModel;
+namespace WinEvo.Actions.Abstractions;
 
 /// <summary>
 /// Everything the Shell needs to list an action and render its inputs:
 /// identity, display text, declared parameters, warnings and elevation need.
-/// Plain data: the behaviour lives on the action definition that owns it.
+/// Plain data: the behaviour lives on the <see cref="ActionDefinition"/> that
+/// owns it.
 /// </summary>
 public sealed record ActionDescriptor
 {
@@ -23,4 +24,16 @@ public sealed record ActionDescriptor
     public InteractionMode Interaction { get; init; } = InteractionMode.Button;
     public IReadOnlyList<ActionWarning> Warnings { get; init; } = [];
     public IReadOnlyList<Parameter> Parameters { get; init; } = [];
+}
+
+public enum ElevationRequirement { NotRequired, Optional, Required }
+
+/// <summary>How an action surfaces in the UI.</summary>
+public enum InteractionMode
+{
+    /// <summary>Classic one-shot action: parameter panel + Execute button.</summary>
+    Button,
+
+    /// <summary>Stateful on/off switch: a single ToggleSwitch that fires on flip.</summary>
+    Toggle,
 }

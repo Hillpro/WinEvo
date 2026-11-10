@@ -1,16 +1,16 @@
 using System.Diagnostics;
-using System.Text.Json;
 using WinEvo.Actions.Abstractions;
 
 namespace WinEvo.Actions.Operations;
 
 /// <summary>
-/// Kills a process by name or PID. Manifest shape:
+/// Kills a process by name or PID:
 /// <code>
-/// { "operation": "process-kill", "name": "SearchUI" }
-/// { "operation": "process-kill", "pid": 1234 }
+/// new ProcessKillOperation { Name = "SearchUI" }
+/// new ProcessKillOperation { Pid = 1234 }
 /// </code>
-/// Exactly one of <see cref="Name"/> / <see cref="Pid"/> is set after parsing.
+/// Set exactly one of <see cref="Name"/> / <see cref="Pid"/>; when both are
+/// set, <see cref="Pid"/> wins. Nothing to kill is a success.
 /// </summary>
 public sealed class ProcessKillOperation : ActionOperation
 {
@@ -18,15 +18,6 @@ public sealed class ProcessKillOperation : ActionOperation
 
     public string? Name { get; init; }
     public int? Pid { get; init; }
-
-    public static ProcessKillOperation FromJson(JsonElement properties)
-    {
-        if (properties.TryGetProperty("pid", out var pid) && pid.ValueKind == JsonValueKind.Number)
-            return new ProcessKillOperation { Pid = pid.GetInt32() };
-        if (properties.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String)
-            return new ProcessKillOperation { Name = name.GetString() };
-        throw new JsonException("process-kill: neither 'name' nor 'pid' provided");
-    }
 
     public override Task<OperationResult> ExecuteAsync(OperationContext context, CancellationToken cancellationToken)
     {
@@ -41,12 +32,11 @@ public sealed class ProcessKillOperation : ActionOperation
                 return Task.FromResult(OperationResult.Ok("killed 1 process(es)"));
             }
 
-            var name = RenderProperty(Name ?? "", context);
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(Name))
                 return Task.FromResult(OperationResult.Fail("neither 'name' nor 'pid' provided"));
 
             var killed = 0;
-            var processes = Process.GetProcessesByName(name);
+            var processes = Process.GetProcessesByName(Name);
             foreach (var process in processes)
             {
                 try
@@ -57,14 +47,14 @@ public sealed class ProcessKillOperation : ActionOperation
                 }
                 catch (Exception ex)
                 {
-                    context.Log($"failed to kill '{name}' (pid {process.Id}): {ex.Message}");
+                    context.Log($"failed to kill '{Name}' (pid {process.Id}): {ex.Message}");
                 }
                 finally
                 {
                     process.Dispose();
                 }
             }
-            context.Log($"killed {killed} process(es) named '{name}'");
+            context.Log($"killed {killed} process(es) named '{Name}'");
             return Task.FromResult(OperationResult.Ok($"killed {killed} process(es)"));
         }
         catch (ArgumentException)

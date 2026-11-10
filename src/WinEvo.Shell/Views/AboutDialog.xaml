@@ -16,7 +16,7 @@
         </StackPanel>
 
         <TextBlock TextWrapping="Wrap" FontSize="13">
-            An open-source Windows 11 optimizer. Configures Windows through declarative JSON action manifests.
+            An open-source Windows 11 optimizer.
         </TextBlock>
 
         <StackPanel Spacing="2">

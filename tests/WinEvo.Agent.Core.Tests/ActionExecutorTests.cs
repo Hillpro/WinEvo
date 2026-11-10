@@ -1,5 +1,4 @@
 using System.Text.Json;
-using WinEvo.ActionModel;
 using WinEvo.Actions.Abstractions;
 using WinEvo.Ipc;
 
@@ -149,7 +148,7 @@ public class ActionExecutorTests
     public void BindParameters_prefers_the_supplied_value_over_the_default()
     {
         var bound = ActionExecutor.BindParameters(
-            Descriptor(new StringParameter { Id = "name", Type = "string", Default = Json("\"fallback\"") }),
+            Descriptor(new StringParameter { Id = "name", Default = "fallback" }),
             new Dictionary<string, JsonElement> { ["name"] = Json("\"supplied\"") });
 
         Assert.Equal("supplied", bound["name"]);
@@ -158,7 +157,7 @@ public class ActionExecutorTests
     [Fact]
     public void BindParameters_falls_back_to_the_default_when_nothing_or_null_is_supplied()
     {
-        var descriptor = Descriptor(new BooleanParameter { Id = "flag", Type = "boolean", Default = Json("true") });
+        var descriptor = Descriptor(new BooleanParameter { Id = "flag", Default = true });
 
         var missing = ActionExecutor.BindParameters(descriptor, new Dictionary<string, JsonElement>());
         var suppliedNull = ActionExecutor.BindParameters(descriptor, new Dictionary<string, JsonElement> { ["flag"] = Json("null") });
@@ -170,7 +169,7 @@ public class ActionExecutorTests
     [Fact]
     public void BindParameters_rejects_a_missing_required_parameter()
     {
-        var descriptor = Descriptor(new StringParameter { Id = "drive", Type = "drive", Required = true });
+        var descriptor = Descriptor(new DriveParameter { Id = "drive", Required = true });
 
         var thrown = Assert.Throws<InvalidOperationException>(
             () => ActionExecutor.BindParameters(descriptor, new Dictionary<string, JsonElement>()));

@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Text.Json;
-using WinEvo.ActionModel;
 
 namespace WinEvo.Actions.Abstractions;
 
@@ -40,10 +38,9 @@ public abstract class ToggleActionDefinition : ActionDefinition
                 new BooleanParameter
                 {
                     Id = IsOnParameterId,
-                    Type = "boolean",
                     Name = switchLabel,
                     Description = switchDescription,
-                    Default = JsonSerializer.SerializeToElement(isOnWhenUnknown),
+                    Default = isOnWhenUnknown,
                 },
             ],
         };
