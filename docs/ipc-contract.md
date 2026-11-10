@@ -13,7 +13,7 @@ Target: gRPC over a named pipe, using `Grpc.Net.Client.ConnectCallback` on the c
 | Service | `\\.\pipe\WinEvo.Agent.System` | `LocalSystem`, interactive user SIDs currently logged in |
 | Broker  | `\\.\pipe\WinEvo.Agent.User.{sessionId}` | Interactive user SID of `sessionId` only |
 
-> **Current vs target.** The broker pipe is named `WinEvo.Agent.User` today (no `{sessionId}` suffix); see the TODO in [`PipeNames.cs`](../src/WinEvo.Ipc/PipeNames.cs). The service pipe isn't created yet — service mode itself is unimplemented.
+> **Current vs target.** The broker pipe carries the session-id suffix today (see [`PipeNames.cs`](../src/WinEvo.Ipc/PipeNames.cs)). The service pipe isn't created yet; service mode itself is unimplemented.
 
 ACLs are applied via `PipeSecurity` when the pipe is created. **Today the agent accepts a single client at a time** (`maxNumberOfServerInstances: 1` in [`AgentHost.cs`](../src/WinEvo.Agent.Core/AgentHost.cs)); multi-client fan-out (Shell + Tray + future CLI on the same agent) is target design.
 
@@ -26,6 +26,22 @@ On accepting a connection:
 3. Verify the module's Authenticode signature against the agent's expected publisher.
 4. Reject the connection if verification fails, or allow in DEBUG builds with a warning logged.
 
+## Messages in the current JSON transport
+
+Each message is one frame: a 4-byte big-endian length, then a UTF-8 JSON object whose `type` field selects the message. The client sends one request and reads one response before sending the next.
+
+| Request (`type`) | Carries | Response (`type`) |
+|---|---|---|
+| `handshake` | `clientKind`, `clientVersion`, `protocolVersion` | `handshake-response`: `agentVersion`, `agentProtocolVersion` |
+| `execute` | `actionId`, `parameters` (values keyed by parameter id) | `execution-response`: `success`, `message`, `error`, `stepResults`, `log` |
+| `read-state` | `actionId` | `state-response`: `values` (live values keyed by parameter id; a parameter with no readable state is absent) |
+
+Any request can instead be answered by `error` (`message`). An `execute` for an id the agent does not have, or for an action that requires elevation while the agent is not elevated, is answered by an `execution-response` with `success: false`.
+
+**The agent runs only the actions in its own catalog.** A request names an action; it cannot supply steps, scripts or a definition of one. The elevation requirement is read from the agent's catalog, never from the request.
+
+The protocol version is 2. Version 1 shipped the action's JSON manifest inside `execute`.
+
 ## Handshake
 
 The first call on any new connection must be `Handshake`.
@@ -34,28 +50,27 @@ The first call on any new connection must be `Handshake`.
 message HandshakeRequest {
   string client_kind      = 1;  // "shell" | "tray" | "cli"
   string client_version   = 2;  // semver
-  int32  protocol_version = 3;  // currently 1
+  int32  protocol_version = 3;  // currently 2
 }
 
 message HandshakeResponse {
-  int32  agent_protocol_version        = 1;
-  string agent_version                 = 2;
-  repeated string supported_operations = 3;
-  repeated string capability_flags     = 4;
+  int32  agent_protocol_version    = 1;
+  string agent_version             = 2;
+  repeated string action_ids       = 3;  // target; not sent by the JSON transport
+  repeated string capability_flags = 4;  // target; not sent by the JSON transport
 }
 ```
 
 ### Versioning policy
 
-> **Status — target, not enforced yet.** The handshake already carries `protocol_version`/`agent_version`/`supported_operations`, but none of the skew checks below are implemented: today the agent answers any handshake and never rejects on version (`AgentHost.HandleAsync`), and the Shell does not gate actions on `agent_version`/`supported_operations`. This is harmless while the Shell and Agent ship in the same package and always update together; it becomes load-bearing the moment they can drift (a portable zip re-extracted over a stale agent, or a future auto-update that touches one and not the other). Wire these before independent updates are possible.
+> **Status: target, not enforced yet.** The handshake already carries `protocol_version` and `agent_version`, but none of the skew checks below are implemented: today the agent answers any handshake and never rejects on version (`AgentHost.HandleAsync`), and the Shell does not compare versions. This is harmless while the Shell and Agent ship in the same package and always update together; it becomes load-bearing the moment they can drift (a portable zip re-extracted over a stale agent, or a future auto-update that touches one and not the other). Wire these before independent updates are possible.
 
 - **protocol_version** mismatch → agent rejects the connection with `FAILED_PRECONDITION`. The Shell offers to update the agent.
-- **agent_version** older than an action's `minAgentVersion` → that specific action is marked unexecutable in the UI with an "update agent" CTA.
-- **supported_operations** lets the Shell grey out manifests that depend on operations the installed agent doesn't know.
+- **action_ids** lets the Shell disable an action the running agent does not contain, instead of failing when the user runs it.
 
 ## Service shape
 
-Of the RPCs below, only `Handshake` and `ExecuteAction` (request / response, no streaming) are implemented in the current JSON transport. The rest are target design for the gRPC swap.
+Of the RPCs below, `Handshake`, `ExecuteAction` (request / response, no streaming) and `ReadState` are implemented in the current JSON transport. The rest are target design for the gRPC swap.
 
 ```proto
 service AgentService {
@@ -63,8 +78,7 @@ service AgentService {
 
   rpc GetAgentStatus(Empty) returns (AgentStatus);                                // not implemented yet
 
-  rpc ListOperations(Empty) returns (OperationCatalog);                           // not implemented yet
-  rpc ValidateAction(ActionManifest) returns (ValidationReport);                  // not implemented yet
+  rpc ReadState(ReadStateRequest) returns (StateResponse);                        // ✅ wired (JSON)
   rpc DryRunAction(DryRunRequest) returns (DryRunReport);                         // not implemented yet
 
   rpc ExecuteAction(ExecuteRequest) returns (stream ExecutionEvent);              // ✅ wired (JSON, no streaming)
@@ -74,7 +88,7 @@ service AgentService {
   rpc ListRunningExecutions(Empty) returns (RunningExecutionList);                // not implemented yet
   rpc SubscribeEvents(Empty) returns (stream AgentEvent);                         // not implemented yet
 
-  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);   // broker mode only — not implemented yet
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);   // broker mode only; not implemented yet
 }
 ```
 
@@ -117,7 +131,7 @@ Standard gRPC status codes:
 
 | Status | Meaning |
 |---|---|
-| `INVALID_ARGUMENT` | Manifest failed validation. Includes `ValidationReport` as a detail. |
+| `INVALID_ARGUMENT` | Unknown action id, or a required parameter is missing. |
 | `FAILED_PRECONDITION` | Protocol / version mismatch, or action preconditions not satisfied. |
 | `PERMISSION_DENIED` | Client signature check failed. |
 | `UNAVAILABLE` | Agent is shutting down. |
