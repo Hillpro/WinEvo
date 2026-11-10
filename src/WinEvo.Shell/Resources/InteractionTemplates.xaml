@@ -27,7 +27,7 @@
                          so Detail.Parameters reaches the action's parameter list. -->
                     <StackPanel Spacing="8"
                                 Visibility="{Binding Detail.HasParameters, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="Parameters" FontWeight="SemiBold" />
+                        <TextBlock x:Uid="ParametersHeader" Text="Parameters" FontWeight="SemiBold" />
                         <ItemsControl
                             ItemsSource="{Binding Detail.Parameters}"
                             ItemTemplateSelector="{StaticResource ParameterInputTemplateSelector}" />
@@ -35,6 +35,7 @@
 
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <Button
+                            x:Uid="ExecuteButton"
                             Content="Execute"
                             Command="{Binding Detail.ExecuteCommand}"
                             Style="{ThemeResource AccentButtonStyle}" />

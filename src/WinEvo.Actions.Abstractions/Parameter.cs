@@ -15,9 +15,6 @@ public abstract class Parameter
     public LocalizableText? Description { get; init; }
     public bool Required { get; init; }
 
-    /// <summary>Short type name shown next to the label, e.g. <c>drive</c>.</summary>
-    public abstract string Type { get; }
-
     /// <summary>
     /// Value the action receives when the caller supplies none, or
     /// <see langword="null"/> when the parameter has no default.
@@ -29,7 +26,6 @@ public sealed class StringParameter : Parameter
 {
     public string? Default { get; init; }
 
-    public override string Type => "string";
     public override object? DefaultValue => Default;
 }
 
@@ -37,7 +33,6 @@ public sealed class BooleanParameter : Parameter
 {
     public bool Default { get; init; }
 
-    public override string Type => "boolean";
     public override object? DefaultValue => Default;
 }
 
@@ -47,7 +42,6 @@ public sealed class IntegerParameter : Parameter
     public int? Min { get; init; }
     public int? Max { get; init; }
 
-    public override string Type => "integer";
     public override object? DefaultValue => Default;
 }
 
@@ -58,7 +52,6 @@ public sealed class EnumParameter : Parameter
     /// <summary>One of <see cref="Choices"/>; the first choice is preselected when absent.</summary>
     public string? Default { get; init; }
 
-    public override string Type => "enum";
     public override object? DefaultValue => Default;
 }
 
@@ -69,8 +62,6 @@ public sealed class DriveParameter : Parameter
     /// <see langword="null"/> means no filter: show all mounted drives.
     /// </summary>
     public IReadOnlyList<string>? AllowedDriveTypes { get; init; }
-
-    public override string Type => "drive";
 
     /// <summary>Always <see langword="null"/>: which drives exist is only known on the user's machine.</summary>
     public override object? DefaultValue => null;

@@ -8,6 +8,8 @@
     <!-- Output exe is WinEvo.exe (consumer-app naming); project folder stays WinEvo.Shell. -->
     <AssemblyName>WinEvo</AssemblyName>
     <UseWinUI>true</UseWinUI>
+    <!-- Strings\en\Resources.resw is the text every other language falls back to. -->
+    <DefaultLanguage>en</DefaultLanguage>
 
     <!-- Unpackaged app. This also switches on the WinAppSDK bootstrap
          auto-initializer, which is what lets the portable build start

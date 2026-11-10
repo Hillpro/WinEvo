@@ -69,6 +69,8 @@ dotnet test    WinEvo.slnx
 dotnet run --project src/WinEvo.Shell     # or F5 in Visual Studio
 ```
 
+The window is shown in the Windows display language; English and French are available, and any other language falls back to English. To try a language without changing Windows, set `WINEVO_LANGUAGE` before launching (PowerShell: `$env:WINEVO_LANGUAGE = 'fr'`).
+
 Agent diagnostic log: `%LOCALAPPDATA%\WinEvo\agent.log` (startup events, pipe-security outcomes, unhandled exceptions — essential for elevated runs where the agent has no visible stdio). The Shell logs alongside it as `shell.log` in the same folder.
 
 ### Release publish

@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:WinEvo.Shell.Views"
+    x:Uid="ConfirmationDialog"
     DefaultButton="Close"
     CloseButtonText="Cancel">
 
@@ -55,6 +56,7 @@
 
         <!-- Danger: explicit acknowledgement -->
         <CheckBox x:Name="AcknowledgeCheckbox"
+                  x:Uid="AcknowledgeCheckbox"
                   Content="I understand the consequences."
                   Visibility="Collapsed"
                   Checked="OnGateStateChanged"
@@ -68,6 +70,7 @@
                        FontSize="12"
                        Opacity="0.8" />
             <TextBox x:Name="TypedPhraseInput"
+                     x:Uid="TypedPhraseInput"
                      PlaceholderText="Type here"
                      TextChanged="OnGateStateChanged" />
         </StackPanel>

@@ -4,6 +4,9 @@
     <TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
     <RootNamespace>WinEvo.Shell.Core</RootNamespace>
     <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+    <!-- Strings.resx is the English text; every other language is a
+         Strings.<lang>.resx compiled into a satellite assembly. -->
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>

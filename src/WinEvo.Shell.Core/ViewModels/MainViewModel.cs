@@ -42,6 +42,7 @@ public sealed partial class MainViewModel : ObservableObject
         _confirmation = confirmation;
         _parameterFactory = parameterFactory;
         _agentLauncher.StateChanged += OnAgentStateChanged;
+        AgentStatus = ViewModelText.Get("Agent_NotConnected", culture);
 
         var items = catalog.Actions
             .Select(action => new ActionItemViewModel(action.Descriptor, culture))
@@ -59,7 +60,7 @@ public sealed partial class MainViewModel : ObservableObject
     public partial ActionDetailViewModel? Detail { get; set; }
 
     [ObservableProperty]
-    public partial string AgentStatus { get; set; } = "Not connected";
+    public partial string AgentStatus { get; set; }
 
     partial void OnSelectedActionChanged(ActionItemViewModel? value)
     {
@@ -90,13 +91,13 @@ public sealed partial class MainViewModel : ObservableObject
     {
         try
         {
-            await _dispatcher.RunOnUiAsync(() => AgentStatus = "Starting agent…").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => AgentStatus = ViewModelText.Get("Agent_Starting", _culture)).ConfigureAwait(false);
             await _agentLauncher.StartAsync(elevated: false, ct).ConfigureAwait(false);
             // OnAgentStateChanged fires from StartAsync and updates AgentStatus.
         }
         catch (Exception ex)
         {
-            await _dispatcher.RunOnUiAsync(() => AgentStatus = $"Agent error: {ex.Message}").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => AgentStatus = ViewModelText.Format("Agent_Error", _culture, ex.Message)).ConfigureAwait(false);
         }
     }
 
@@ -116,13 +117,16 @@ public sealed partial class MainViewModel : ObservableObject
         AgentStatus = FormatStatus(_agentLauncher.LastHandshake, _agentLauncher.IsElevated, runningCount);
     }
 
-    private static string FormatStatus(HandshakeResponse? handshake, bool elevated, int runningCount)
+    private string FormatStatus(HandshakeResponse? handshake, bool elevated, int runningCount)
     {
         if (handshake is null)
-            return "Not connected";
-        var badge = elevated ? " (elevated)" : "";
-        var runningLabel = runningCount == 1 ? "1 running" : $"{runningCount} running";
-        return $"Connected — agent {handshake.AgentVersion}{badge} · {runningLabel}";
+            return ViewModelText.Get("Agent_NotConnected", _culture);
+
+        return ViewModelText.Format(
+            elevated ? "Agent_ConnectedElevated" : "Agent_Connected",
+            _culture,
+            handshake.AgentVersion,
+            runningCount);
     }
 
 }

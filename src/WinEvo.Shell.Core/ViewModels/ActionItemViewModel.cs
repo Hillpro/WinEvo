@@ -12,6 +12,7 @@ public sealed class ActionItemViewModel : ObservableObject
         Descriptor = descriptor;
         DisplayName = descriptor.Name.Resolve(culture);
         DisplayDescription = descriptor.Description?.Resolve(culture);
+        DisplayCategory = ViewModelText.Find($"Category_{descriptor.Category}", culture) ?? descriptor.Category;
     }
 
     public ActionDescriptor Descriptor { get; }
@@ -20,5 +21,8 @@ public sealed class ActionItemViewModel : ObservableObject
     public string DisplayName { get; }
     public string? DisplayDescription { get; }
     public string Category => Descriptor.Category;
+
+    /// <summary>The category's name in the user's language, or its id when it has no name yet.</summary>
+    public string DisplayCategory { get; }
     public bool RequiresElevation => Descriptor.Elevation == ElevationRequirement.Required;
 }

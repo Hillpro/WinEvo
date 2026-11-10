@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Status_MissingParameters" xml:space="preserve">
+    <value>Paramètre(s) obligatoire(s) manquant(s) : {0}</value>
+  </data>
+  <data name="Status_CancelledByUser" xml:space="preserve">
+    <value>Annulé par l'utilisateur.</value>
+  </data>
+  <data name="Status_WaitingForElevation" xml:space="preserve">
+    <value>En attente de l'autorisation administrateur…</value>
+  </data>
+  <data name="Status_Running" xml:space="preserve">
+    <value>Exécution en cours…</value>
+  </data>
+  <data name="Status_Succeeded" xml:space="preserve">
+    <value>Terminé.</value>
+  </data>
+  <data name="Status_FailedAtStep" xml:space="preserve">
+    <value>Échec à l'étape {0} sur {1}.</value>
+  </data>
+  <data name="Status_Failed" xml:space="preserve">
+    <value>Échec.</value>
+  </data>
+  <data name="Status_Error" xml:space="preserve">
+    <value>Erreur : {0}</value>
+  </data>
+  <data name="Status_ElevationDeclined" xml:space="preserve">
+    <value>L'autorisation administrateur a été refusée. L'action n'a pas été exécutée.</value>
+  </data>
+  <data name="Status_BlockedDownload" xml:space="preserve">
+    <value>Windows a bloqué l'action, car cette copie a été téléchargée depuis Internet. Faites un clic droit sur le fichier .zip téléchargé, ouvrez Propriétés, cochez Débloquer, puis extrayez-le de nouveau.</value>
+  </data>
+  <data name="Status_AgentNotConnected" xml:space="preserve">
+    <value>Agent non connecté.</value>
+  </data>
+  <data name="Agent_NotConnected" xml:space="preserve">
+    <value>Non connecté</value>
+  </data>
+  <data name="Agent_Starting" xml:space="preserve">
+    <value>Démarrage de l'agent…</value>
+  </data>
+  <data name="Agent_Error" xml:space="preserve">
+    <value>Erreur de l'agent : {0}</value>
+  </data>
+  <data name="Agent_Connected" xml:space="preserve">
+    <value>Connecté · agent {0} · {1} en cours</value>
+  </data>
+  <data name="Agent_ConnectedElevated" xml:space="preserve">
+    <value>Connecté · agent {0} (droits administrateur) · {1} en cours</value>
+  </data>
+  <data name="Category_customization" xml:space="preserve">
+    <value>Personnalisation</value>
+  </data>
+  <data name="Category_storage" xml:space="preserve">
+    <value>Stockage</value>
+  </data>
+  <data name="Drive_Label" xml:space="preserve">
+    <value>{0}  {1}  ({2:0.#} Go libres)</value>
+  </data>
+  <data name="DriveType_Fixed" xml:space="preserve">
+    <value>Disque local</value>
+  </data>
+  <data name="DriveType_Removable" xml:space="preserve">
+    <value>Disque amovible</value>
+  </data>
+</root>

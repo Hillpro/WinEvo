@@ -18,7 +18,7 @@ public sealed partial class AboutDialog : ContentDialog
     {
         InitializeComponent();
 
-        VersionText.Text = $"Version {ResolveVersion()}";
+        VersionText.Text = DialogText.Format("About_Version", ResolveVersion());
         CopyrightText.Text = ResolveCopyright();
 
         GitHubLink.NavigateUri = new Uri(RepositoryUrl);

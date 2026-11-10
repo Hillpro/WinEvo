@@ -23,7 +23,6 @@ public abstract class ParameterInputViewModel : ObservableObject
 
     public Parameter Parameter { get; }
     public string Id => Parameter.Id;
-    public string Type => Parameter.Type;
     public bool Required => Parameter.Required;
     public string DisplayName { get; }
     public string? DisplayDescription { get; }

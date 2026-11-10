@@ -81,7 +81,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
             .ToList();
         if (missingRequired.Count > 0)
         {
-            Status = $"Missing required parameter(s): {string.Join(", ", missingRequired.Select(p => p.DisplayName))}";
+            Status = Text("Status_MissingParameters", string.Join(", ", missingRequired.Select(p => p.DisplayName)));
             return;
         }
 
@@ -100,7 +100,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
                 var accepted = await _confirmation.RequestAsync(request, ct).ConfigureAwait(false);
                 if (!accepted)
                 {
-                    await _dispatcher.RunOnUiAsync(() => Status = "Cancelled by user.").ConfigureAwait(false);
+                    await _dispatcher.RunOnUiAsync(() => Status = Text("Status_CancelledByUser")).ConfigureAwait(false);
                     return;
                 }
             }
@@ -109,7 +109,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
             if (client is null)
                 return;
 
-            await _dispatcher.RunOnUiAsync(() => Status = "Running…").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => Status = Text("Status_Running")).ConfigureAwait(false);
 
             var paramDict = Parameters.ToDictionary(p => p.Id, p => p.ToJsonValue());
 
@@ -117,11 +117,13 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
 
             await _dispatcher.RunOnUiAsync(() =>
             {
-                Status = response.Success
-                    ? $"Success — {response.Message}"
-                    : $"Failed — {response.Message}";
+                Status = ExecutionOutcomeText.For(response, Culture);
 
+                // The agent's own account of the run. It is diagnostic output
+                // and stays in English, like the agent's log.
                 var detail = new System.Text.StringBuilder();
+                if (response.Message is not null)
+                    detail.AppendLine(response.Message);
                 foreach (var step in response.StepResults)
                 {
                     var ok = step.Success ? "OK" : "FAIL";
@@ -138,7 +140,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
         {
             await _dispatcher.RunOnUiAsync(() =>
             {
-                Status = $"Error: {ex.Message}";
+                Status = Text("Status_Error", ex.Message);
                 ResultDetail = ex.ToString();
             }).ConfigureAwait(false);
         }
@@ -160,7 +162,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
 
         if (requiresElevation && !_agentLauncher.IsElevated)
         {
-            await _dispatcher.RunOnUiAsync(() => Status = "Waiting for elevation…").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => Status = Text("Status_WaitingForElevation")).ConfigureAwait(false);
             try
             {
                 return await _agentLauncher.EnsureElevatedAsync(ct).ConfigureAwait(false);
@@ -171,10 +173,9 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
                 // launch with the same error, so say which one we believe it
                 // was rather than blaming the user for a prompt they may never
                 // have been shown.
-                var message = ex.Reason == ElevationFailureReason.DownloadMarkerPresent
-                    ? "Windows blocked the action because this copy was downloaded from the internet. "
-                      + "Right-click the downloaded .zip, open Properties, tick Unblock, then extract it again."
-                    : "Elevation was declined. Action not executed.";
+                var message = Text(ex.Reason == ElevationFailureReason.DownloadMarkerPresent
+                    ? "Status_BlockedDownload"
+                    : "Status_ElevationDeclined");
 
                 await _dispatcher.RunOnUiAsync(() => Status = message).ConfigureAwait(false);
                 return null;
@@ -184,13 +185,15 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
         var client = _agentLauncher.Client;
         if (client is null || !client.IsConnected)
         {
-            await _dispatcher.RunOnUiAsync(() => Status = "Agent not connected.").ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => Status = Text("Status_AgentNotConnected")).ConfigureAwait(false);
             return null;
         }
         return client;
     }
 
     private bool CanExecute() => !IsRunning;
+
+    private string Text(string key, params object?[] arguments) => ViewModelText.Format(key, Culture, arguments);
 
     /// <summary>
     /// Replaces each parameter's declared default with the value currently in

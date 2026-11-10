@@ -40,38 +40,38 @@ public sealed partial class ConfirmationDialog : ContentDialog
         switch (severity)
         {
             case WarningSeverity.Info:
-                PrimaryButtonText = "Continue";
+                PrimaryButtonText = DialogText.Get("Confirm_Continue");
                 IsPrimaryButtonEnabled = true;
-                SeverityLabel.Text = "Information";
+                SeverityLabel.Text = DialogText.Get("Severity_Info");
                 SeverityIcon.Glyph = GlyphInfo;
                 SeverityBanner.Background = new SolidColorBrush(Color.FromArgb(0x33, 0x00, 0x78, 0xD4));
                 break;
 
             case WarningSeverity.Warning:
-                PrimaryButtonText = "Continue";
+                PrimaryButtonText = DialogText.Get("Confirm_Continue");
                 IsPrimaryButtonEnabled = true;
-                SeverityLabel.Text = "Warning";
+                SeverityLabel.Text = DialogText.Get("Severity_Warning");
                 SeverityIcon.Glyph = GlyphWarning;
                 SeverityBanner.Background = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xB9, 0x00));
                 break;
 
             case WarningSeverity.Danger:
-                PrimaryButtonText = "Run anyway";
+                PrimaryButtonText = DialogText.Get("Confirm_RunAnyway");
                 IsPrimaryButtonEnabled = false;
                 AcknowledgeCheckbox.Visibility = Visibility.Visible;
-                SeverityLabel.Text = "Destructive action";
+                SeverityLabel.Text = DialogText.Get("Severity_Danger");
                 SeverityIcon.Glyph = GlyphDanger;
                 SeverityBanner.Background = new SolidColorBrush(Color.FromArgb(0x33, 0xC4, 0x2B, 0x1C));
                 break;
 
             case WarningSeverity.Critical:
-                PrimaryButtonText = "Run anyway";
+                PrimaryButtonText = DialogText.Get("Confirm_RunAnyway");
                 IsPrimaryButtonEnabled = false;
                 AcknowledgeCheckbox.Visibility = Visibility.Visible;
                 TypedPhrasePanel.Visibility = Visibility.Visible;
                 _requiredPhrase = actionName;
-                TypedPhrasePrompt.Text = $"To confirm, type the action name exactly: {actionName}";
-                SeverityLabel.Text = "Critical - irreversible";
+                TypedPhrasePrompt.Text = DialogText.Format("Confirm_TypeActionName", actionName);
+                SeverityLabel.Text = DialogText.Get("Severity_Critical");
                 SeverityIcon.Glyph = GlyphCritical;
                 SeverityBanner.Background = new SolidColorBrush(Color.FromArgb(0x55, 0xC4, 0x2B, 0x1C));
                 break;

@@ -24,12 +24,7 @@
         <local:ParameterInputTemplateSelector.StringTemplate>
             <DataTemplate>
                 <StackPanel Spacing="4" Margin="0,0,0,12">
-                    <TextBlock>
-                        <Run Text="{Binding DisplayName}" />
-                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </TextBlock>
+                    <TextBlock Text="{Binding DisplayName}" />
                     <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
             </DataTemplate>
@@ -37,12 +32,7 @@
         <local:ParameterInputTemplateSelector.IntegerTemplate>
             <DataTemplate>
                 <StackPanel Spacing="4" Margin="0,0,0,12">
-                    <TextBlock>
-                        <Run Text="{Binding DisplayName}" />
-                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </TextBlock>
+                    <TextBlock Text="{Binding DisplayName}" />
                     <NumberBox
                         Value="{Binding Value, Mode=TwoWay}"
                         Minimum="{Binding Minimum}"
@@ -55,12 +45,7 @@
         <local:ParameterInputTemplateSelector.BooleanTemplate>
             <DataTemplate>
                 <StackPanel Spacing="4" Margin="0,0,0,12">
-                    <TextBlock>
-                        <Run Text="{Binding DisplayName}" />
-                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </TextBlock>
+                    <TextBlock Text="{Binding DisplayName}" />
                     <ToggleSwitch IsOn="{Binding Value, Mode=TwoWay}" />
                 </StackPanel>
             </DataTemplate>
@@ -68,12 +53,7 @@
         <local:ParameterInputTemplateSelector.EnumTemplate>
             <DataTemplate>
                 <StackPanel Spacing="4" Margin="0,0,0,12">
-                    <TextBlock>
-                        <Run Text="{Binding DisplayName}" />
-                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </TextBlock>
+                    <TextBlock Text="{Binding DisplayName}" />
                     <ComboBox
                         ItemsSource="{Binding Choices}"
                         SelectedItem="{Binding SelectedChoice, Mode=TwoWay}"
@@ -84,13 +64,9 @@
         <local:ParameterInputTemplateSelector.DriveTemplate>
             <DataTemplate>
                 <StackPanel Spacing="4" Margin="0,0,0,12">
-                    <TextBlock>
-                        <Run Text="{Binding DisplayName}" />
-                        <Run Text=" (" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text="{Binding Type}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <Run Text=")" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </TextBlock>
+                    <TextBlock Text="{Binding DisplayName}" />
                     <ComboBox
+                        x:Uid="DrivePicker"
                         ItemsSource="{Binding DriveOptions}"
                         SelectedItem="{Binding SelectedDrive, Mode=TwoWay}"
                         DisplayMemberPath="Label"
