@@ -22,6 +22,7 @@ namespace WinEvo.Shell;
 public partial class App : Application
 {
     private AgentLauncher? _agentLauncher;
+    private readonly ExecutionTracker _executions = new();
     private MainWindow? _window;
 
     private const string LanguageOverrideVariable = "WINEVO_LANGUAGE";
@@ -124,7 +125,7 @@ public partial class App : Application
         var parameterFactory = new ParameterInputFactory(new SystemDriveProvider(culture));
 
         var viewModel = new MainViewModel(
-            new CoreActionCatalog(), _agentLauncher, culture,
+            new CoreActionCatalog(), _agentLauncher, _executions, culture,
             dispatcherQueue, confirmation, parameterFactory);
 
         _window = new MainWindow(viewModel);
@@ -153,12 +154,9 @@ public partial class App : Application
         if (_teardownStarted) return;
         _teardownStarted = true;
 
-        // Broker mode: if an action is running, confirm before killing the agent,
-        // since teardown ends the child operation abruptly.
-        // TODO: aggregate IsRunning across all in-flight actions on MainViewModel
-        // so executions whose Detail VM was replaced by switching selection are
-        // also observed here, not just the currently-selected one.
-        if (_window?.ViewModel.Detail?.IsRunning == true
+        // Broker mode: if any action is running, selected or not, confirm
+        // before killing the agent, since teardown ends it abruptly.
+        if (_executions.RunningCount > 0
             && !await ConfirmStopRunningActionAsync())
         {
             // User chose to let the action finish.

@@ -24,6 +24,9 @@
   <data name="Status_Running" xml:space="preserve">
     <value>Running…</value>
   </data>
+  <data name="Status_WaitingForAnotherAction" xml:space="preserve">
+    <value>Waiting for another action to finish…</value>
+  </data>
   <data name="Status_Succeeded" xml:space="preserve">
     <value>Done.</value>
   </data>

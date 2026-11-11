@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -18,6 +17,7 @@ namespace WinEvo.Shell.Core.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly AgentLauncher _agentLauncher;
+    private readonly ExecutionTracker _executions;
     private readonly CultureInfo _culture;
     private readonly DispatcherQueue _dispatcher;
     private readonly IConfirmationService _confirmation;
@@ -27,21 +27,25 @@ public sealed partial class MainViewModel : ObservableObject
     /// Source of the action list. Only descriptors are read here; actions are
     /// executed by the agent, never in this process.
     /// </param>
+    /// <param name="executions">The session's running executions, whatever action is selected.</param>
     /// <param name="culture">Language every action text is displayed in.</param>
     public MainViewModel(
         IActionCatalog catalog,
         AgentLauncher agentLauncher,
+        ExecutionTracker executions,
         CultureInfo culture,
         DispatcherQueue dispatcher,
         IConfirmationService confirmation,
         IParameterInputFactory parameterFactory)
     {
         _agentLauncher = agentLauncher;
+        _executions = executions;
         _culture = culture;
         _dispatcher = dispatcher;
         _confirmation = confirmation;
         _parameterFactory = parameterFactory;
-        _agentLauncher.StateChanged += OnAgentStateChanged;
+        _agentLauncher.StateChanged += QueueAgentStatusRefresh;
+        _executions.Changed += QueueAgentStatusRefresh;
         AgentStatus = ViewModelText.Get("Agent_NotConnected", culture);
 
         var items = catalog.Actions
@@ -66,24 +70,14 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Detail = value is null
             ? null
-            : new ActionDetailViewModel(value, _culture, _agentLauncher, _dispatcher, _confirmation, _parameterFactory);
+            : new ActionDetailViewModel(value, _culture, _agentLauncher, _executions, _dispatcher, _confirmation, _parameterFactory);
     }
 
     partial void OnDetailChanged(ActionDetailViewModel? oldValue, ActionDetailViewModel? newValue)
     {
-        // Subscribe to the active Detail's IsRunning so the footer reflects
-        // execution state without any extra binding.
-        if (oldValue is not null) oldValue.PropertyChanged -= OnDetailPropertyChanged;
-        if (newValue is not null) newValue.PropertyChanged += OnDetailPropertyChanged;
-
+        // An execution the old Detail started keeps running: the execution
+        // tracker, not the Detail, is what lists it.
         oldValue?.Dispose();
-        RefreshAgentStatus();
-    }
-
-    private void OnDetailPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ActionDetailViewModel.IsRunning))
-            _dispatcher.TryEnqueue(RefreshAgentStatus);
     }
 
     [RelayCommand]
@@ -101,20 +95,15 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    private void OnAgentStateChanged()
+    /// <summary>Both sources raise their change from any thread; the footer is updated on the UI thread.</summary>
+    private void QueueAgentStatusRefresh()
     {
         _dispatcher.TryEnqueue(RefreshAgentStatus);
     }
 
     private void RefreshAgentStatus()
     {
-        // The agent only runs one execution at a time today, so observing the
-        // current Detail is sufficient. TODO: aggregate IsRunning across every
-        // ActionDetailViewModel once multi-execution is supported (or, more
-        // immediately, once switching selection mid-execution should still
-        // count the prior VM — right now it doesn't because Detail is swapped).
-        var runningCount = Detail?.IsRunning == true ? 1 : 0;
-        AgentStatus = FormatStatus(_agentLauncher.LastHandshake, _agentLauncher.IsElevated, runningCount);
+        AgentStatus = FormatStatus(_agentLauncher.LastHandshake, _agentLauncher.IsElevated, _executions.RunningCount);
     }
 
     private string FormatStatus(HandshakeResponse? handshake, bool elevated, int runningCount)

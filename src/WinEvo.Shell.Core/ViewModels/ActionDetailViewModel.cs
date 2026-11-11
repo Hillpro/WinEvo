@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
 using WinEvo.Actions.Abstractions;
+using WinEvo.Ipc;
 using WinEvo.Shell.Core.Services;
 using WinEvo.Shell.Core.ViewModels.Interactions;
 
@@ -20,6 +21,7 @@ namespace WinEvo.Shell.Core.ViewModels;
 public sealed partial class ActionDetailViewModel : ObservableObject, IDisposable
 {
     private readonly AgentLauncher _agentLauncher;
+    private readonly ExecutionTracker _executions;
     private readonly DispatcherQueue _dispatcher;
     private readonly IConfirmationService _confirmation;
     private readonly CancellationTokenSource _liveStateRead = new();
@@ -29,11 +31,13 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
         ActionItemViewModel item,
         CultureInfo culture,
         AgentLauncher agentLauncher,
+        ExecutionTracker executions,
         DispatcherQueue dispatcher,
         IConfirmationService confirmation,
         IParameterInputFactory parameterFactory)
     {
         _agentLauncher = agentLauncher;
+        _executions = executions;
         _dispatcher = dispatcher;
         _confirmation = confirmation;
         Item = item;
@@ -47,6 +51,10 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
             InteractionMode.Toggle => new ToggleInteractionController(this),
             _ => new ButtonInteractionController(this),
         };
+
+        var runningResponse = executions.FindRunning(item.Id);
+        if (runningResponse is not null)
+            _ = FollowRunningExecutionAsync(runningResponse);
 
         _ = ShowLiveStateAsync(_liveStateRead.Token);
     }
@@ -62,6 +70,7 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
     public InteractionController Interaction { get; }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ExecuteCommand))]
     public partial bool IsRunning { get; set; }
 
     /// <summary>True while the agent is being asked what the system currently looks like.</summary>
@@ -114,41 +123,73 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
 
             var paramDict = Parameters.ToDictionary(p => p.Id, p => p.ToJsonValue());
 
-            var response = await client.ExecuteAsync(Item.Id, paramDict, ct).ConfigureAwait(false);
+            var response = await _executions.RunAsync(client, Item.Id, paramDict, ct).ConfigureAwait(false);
 
-            await _dispatcher.RunOnUiAsync(() =>
-            {
-                Status = ExecutionOutcomeText.For(response, Culture);
-
-                // The agent's own account of the run. It is diagnostic output
-                // and stays in English, like the agent's log.
-                var detail = new System.Text.StringBuilder();
-                if (response.Message is not null)
-                    detail.AppendLine(response.Message);
-                foreach (var step in response.StepResults)
-                {
-                    var outcome = step.Success ? "OK" : step.FailureTolerated ? "WARN" : "FAIL";
-                    detail.AppendLine($"[{outcome}] {step.Operation}"
-                        + (step.Message is null ? "" : $" — {step.Message}")
-                        + (step.Error is null ? "" : $" — {step.Error}"));
-                }
-                foreach (var line in response.Log)
-                    detail.AppendLine(line);
-                ResultDetail = detail.Length == 0 ? null : detail.ToString().TrimEnd();
-            }).ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => ShowOutcome(response)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await _dispatcher.RunOnUiAsync(() =>
-            {
-                Status = Text("Status_Error", ex.Message);
-                ResultDetail = ex.ToString();
-            }).ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => ShowError(ex)).ConfigureAwait(false);
         }
         finally
         {
             await _dispatcher.RunOnUiAsync(() => IsRunning = false).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Shows as running an execution of this action that was started before
+    /// the user selected it again, then shows how that execution ended, so
+    /// the action never looks idle while the agent is still running it.
+    /// </summary>
+    private async Task FollowRunningExecutionAsync(Task<ExecutionResponse> runningResponse)
+    {
+        await _dispatcher.RunOnUiAsync(() =>
+        {
+            IsRunning = true;
+            Status = Text("Status_Running");
+        }).ConfigureAwait(false);
+
+        try
+        {
+            var response = await runningResponse.ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() => ShowOutcome(response)).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await _dispatcher.RunOnUiAsync(() => ShowError(ex)).ConfigureAwait(false);
+        }
+        finally
+        {
+            await _dispatcher.RunOnUiAsync(() => IsRunning = false).ConfigureAwait(false);
+        }
+    }
+
+    private void ShowOutcome(ExecutionResponse response)
+    {
+        Status = ExecutionOutcomeText.For(response, Culture);
+
+        // The agent's own account of the run. It is diagnostic output and
+        // stays in English, like the agent's log.
+        var detail = new System.Text.StringBuilder();
+        if (response.Message is not null)
+            detail.AppendLine(response.Message);
+        foreach (var step in response.StepResults)
+        {
+            var outcome = step.Success ? "OK" : step.FailureTolerated ? "WARN" : "FAIL";
+            detail.AppendLine($"[{outcome}] {step.Operation}"
+                + (step.Message is null ? "" : $" — {step.Message}")
+                + (step.Error is null ? "" : $" — {step.Error}"));
+        }
+        foreach (var line in response.Log)
+            detail.AppendLine(line);
+        ResultDetail = detail.Length == 0 ? null : detail.ToString().TrimEnd();
+    }
+
+    private void ShowError(Exception ex)
+    {
+        Status = Text("Status_Error", ex.Message);
+        ResultDetail = ex.ToString();
     }
 
     /// <summary>
@@ -208,7 +249,18 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
         if (client is null || !client.IsConnected)
             return;
 
-        await _dispatcher.RunOnUiAsync(() => IsReadingLiveState = true).ConfigureAwait(false);
+        // The agent answers one request at a time, so the read waits for any
+        // running execution to end: hours, for a free-space wipe. Say so,
+        // rather than leave a disabled switch and a spinner unexplained.
+        var waitingForAnotherAction = _executions.RunningActionIds.Any(actionId => actionId != Item.Id)
+            ? Text("Status_WaitingForAnotherAction")
+            : null;
+
+        await _dispatcher.RunOnUiAsync(() =>
+        {
+            IsReadingLiveState = true;
+            Status ??= waitingForAnotherAction;
+        }).ConfigureAwait(false);
         try
         {
             var liveValues = await client.ReadStateAsync(Item.Id, ct).ConfigureAwait(false);
@@ -242,7 +294,12 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
         }
         finally
         {
-            await _dispatcher.RunOnUiAsync(() => IsReadingLiveState = false).ConfigureAwait(false);
+            await _dispatcher.RunOnUiAsync(() =>
+            {
+                IsReadingLiveState = false;
+                if (waitingForAnotherAction is not null && Status == waitingForAnotherAction)
+                    Status = null;
+            }).ConfigureAwait(false);
         }
     }
 
