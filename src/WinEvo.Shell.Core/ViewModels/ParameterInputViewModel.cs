@@ -26,6 +26,7 @@ public abstract class ParameterInputViewModel : ObservableObject
     public bool Required => Parameter.Required;
     public string DisplayName { get; }
     public string? DisplayDescription { get; }
+    public bool HasDescription => !string.IsNullOrWhiteSpace(DisplayDescription);
 
     /// <summary>
     /// True when the user has supplied a usable value. The <c>Execute</c>

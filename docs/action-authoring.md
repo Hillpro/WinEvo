@@ -30,7 +30,7 @@ The example to read is [WipeFreeSpaceAction.cs](../src/WinEvo.Actions/Storage/Wi
 
 ## A toggle action
 
-A toggle action is a single on/off switch over a piece of system state. It has no Execute button: flipping the switch runs it. Derive from `ToggleActionDefinition`, which adds the switch to the descriptor for you. Pass its constructor the descriptor, a `switchLabel`, an optional `switchDescription` and `isOnWhenUnknown`, then override two methods:
+A toggle action is a single on/off switch over a piece of system state. It has no Execute button: flipping the switch runs it. Derive from `ToggleActionDefinition`, which adds the switch to the descriptor for you. Pass its constructor the descriptor, a `switchLabel` (shown above the switch), an optional `switchDescription` (shown under it, to explain what on and off mean) and `isOnWhenUnknown`, then override two methods:
 
 - `ReadIsOnAsync` reports where the switch stands **on this machine right now**. Return `null` when that cannot be determined; the switch then shows `isOnWhenUnknown`. Never return a guess: the switch must reflect the system, not the action's default.
 - `ApplyAsync` moves the system to the requested position.
@@ -86,6 +86,8 @@ Each parameter becomes an input in the detail pane. Pick the class that matches 
 | `BooleanParameter` | Switch | `Default` | `execution.GetBoolean(id)` |
 | `EnumParameter` | Drop-down | `Choices`, `Default` | `execution.GetString(id)` |
 | `DriveParameter` | Drop-down of the machine's drives | `AllowedDriveTypes` | `execution.GetString(id)` (the drive root, e.g. `C:\`) |
+
+Every parameter takes a `Name`, shown above its input, and an optional `Description`, shown under it.
 
 A `Required` parameter with no value and no default stops the action before it starts. A parameter that is not required and has neither is simply absent: read it with `execution.FindString(id)` or `execution.FindInteger(id)`, which return `null` in that case. The `Get` methods throw on an absent value.
 

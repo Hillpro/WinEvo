@@ -30,6 +30,9 @@ public sealed class ToggleInteractionController : InteractionController, IDispos
         detail.PropertyChanged += OnDetailPropertyChanged;
     }
 
+    /// <summary>The switch's input: its label and description bind here.</summary>
+    public BooleanParameterInputViewModel SwitchInput => _toggleParameter;
+
     /// <summary>Two-way: the ToggleSwitch's IsOn binds here.</summary>
     public bool IsOn
     {
