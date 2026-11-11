@@ -21,95 +21,22 @@ The Shell never runs action code. It reads the descriptor, collects the inputs, 
 
 ## A one-shot action
 
-A one-shot action shows its parameters and an **Execute** button. Derive from `ActionDefinition`:
+A one-shot action shows its parameters and an **Execute** button. Derive from `ActionDefinition` and provide two members:
 
-```csharp
-public sealed class WipeFreeSpaceAction : ActionDefinition
-{
-    private const string DriveParameterId = "drive";
+- `Descriptor`: the data described in [The descriptor](#the-descriptor), including the action's parameters and warnings.
+- `ExecuteAsync`: reads the parameter values from the `ActionExecution` it is given and runs operations through it.
 
-    public override ActionDescriptor Descriptor { get; } = new()
-    {
-        Id = "storage.wipe-free-space",
-        Category = Categories.Storage,
-        Name = ActionText.For("WipeFreeSpace_Name"),
-        Description = ActionText.For("WipeFreeSpace_Description"),
-        Author = "Hillpro",
-        Elevation = ElevationRequirement.Required,
-        Warnings =
-        [
-            new ActionWarning
-            {
-                Severity = WarningSeverity.Warning,
-                Message = ActionText.For("WipeFreeSpace_LongRunningWarning"),
-            },
-        ],
-        Parameters =
-        [
-            new DriveParameter
-            {
-                Id = DriveParameterId,
-                Name = ActionText.For("WipeFreeSpace_DriveLabel"),
-                Required = true,
-                AllowedDriveTypes = ["fixed", "removable"],
-            },
-        ],
-    };
-
-    public override Task ExecuteAsync(ActionExecution execution, CancellationToken cancellationToken)
-    {
-        var drive = execution.GetString(DriveParameterId);
-        var wipe = new BuiltinToolOperation { Name = "cipher", Args = [$"/w:{drive}"] };
-        return execution.RunAsync(wipe, cancellationToken);
-    }
-}
-```
-
-The full version is [WipeFreeSpaceAction.cs](../src/WinEvo.Actions/Storage/WipeFreeSpaceAction.cs).
+The example to read is [WipeFreeSpaceAction.cs](../src/WinEvo.Actions/Storage/WipeFreeSpaceAction.cs): one drive parameter, one warning, one operation.
 
 ## A toggle action
 
-A toggle action is a single on/off switch over a piece of system state. It has no Execute button: flipping the switch runs it. Derive from `ToggleActionDefinition`, which adds the switch to the descriptor for you:
-
-```csharp
-public sealed class BingSearchResultsAction : ToggleActionDefinition
-{
-    private const string SearchKey = @"HKCU\Software\Microsoft\Windows\CurrentVersion\Search";
-
-    public BingSearchResultsAction()
-        : base(
-            new ActionDescriptor
-            {
-                Id = "customization.bing-search-results",
-                Category = Categories.Customization,
-                Name = ActionText.For("BingSearchResults_Name"),
-                Description = ActionText.For("BingSearchResults_Description"),
-            },
-            switchLabel: ActionText.For("BingSearchResults_SwitchLabel"),
-            isOnWhenUnknown: true)
-    {
-    }
-
-    protected override Task<bool?> ReadIsOnAsync(CancellationToken cancellationToken)
-    {
-        var enabled = RegistryValueReader.Read(SearchKey, "BingSearchEnabled");
-        return Task.FromResult<bool?>(enabled is null ? null : enabled is 1);
-    }
-
-    protected override async Task ApplyAsync(bool isOn, ActionExecution execution, CancellationToken cancellationToken)
-    {
-        var enabled = isOn ? 1 : 0;
-        await execution.RunAsync(RegistrySetOperation.Dword(SearchKey, "BingSearchEnabled", enabled), cancellationToken);
-        await execution.TryRunAsync(new ProcessKillOperation { Name = "SearchUI" }, cancellationToken);
-    }
-}
-```
+A toggle action is a single on/off switch over a piece of system state. It has no Execute button: flipping the switch runs it. Derive from `ToggleActionDefinition`, which adds the switch to the descriptor for you. Pass its constructor the descriptor, a `switchLabel`, an optional `switchDescription` and `isOnWhenUnknown`, then override two methods:
 
 - `ReadIsOnAsync` reports where the switch stands **on this machine right now**. Return `null` when that cannot be determined; the switch then shows `isOnWhenUnknown`. Never return a guess: the switch must reflect the system, not the action's default.
 - `ApplyAsync` moves the system to the requested position.
 - A toggle action declares no parameters of its own. A descriptor that does is rejected when the action is constructed.
 
-The full version is [BingSearchResultsAction.cs](../src/WinEvo.Actions/Customization/BingSearchResultsAction.cs).
+The example to read is [BingSearchResultsAction.cs](../src/WinEvo.Actions/Customization/BingSearchResultsAction.cs).
 
 ## The descriptor
 
@@ -190,7 +117,7 @@ Operations are the closed set of primitives the agent can perform. Actions compo
 |---|---|---|
 | `registry-set` | Writes a registry value, creating the key if needed | `RegistrySetOperation.Dword(key, name, 1)`, also `Qword`, `Sz`, `ExpandSz`, `MultiSz` |
 | `registry-delete` | Deletes a value, or a whole key when `ValueName` is omitted. Idempotent. | `new RegistryDeleteOperation { Key = ..., ValueName = ... }` |
-| `process-kill` | Kills a process by name or PID. Nothing to kill is a success. | `new ProcessKillOperation { Name = "SearchUI" }` |
+| `process-kill` | Kills a process by name or PID. Nothing to kill is a success. | `new ProcessKillOperation { Name = "SearchHost" }` |
 | `builtin-tool` | Runs a tool from `System32` by bare name | `new BuiltinToolOperation { Name = "cipher", Args = [...] }` |
 | `external-process` | Runs any executable; `%VARIABLE%` in the path is expanded | `new ExternalProcessOperation { Path = ..., Args = [...] }` |
 | `powershell` | Runs a Windows PowerShell 5.1 script | `new PowerShellOperation { Script = ... }` |

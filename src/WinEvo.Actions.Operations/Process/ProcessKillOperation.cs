@@ -6,7 +6,7 @@ namespace WinEvo.Actions.Operations;
 /// <summary>
 /// Kills a process by name or PID:
 /// <code>
-/// new ProcessKillOperation { Name = "SearchUI" }
+/// new ProcessKillOperation { Name = "SearchHost" }
 /// new ProcessKillOperation { Pid = 1234 }
 /// </code>
 /// Set exactly one of <see cref="Name"/> / <see cref="Pid"/>; when both are

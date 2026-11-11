@@ -50,6 +50,10 @@ public sealed class BingSearchResultsAction : ToggleActionDefinition
         // if the restart fails. The run is still reported as failed in that
         // case: a tolerated failure does not stop an action, but it does
         // fail the execution.
-        await execution.TryRunAsync(new ProcessKillOperation { Name = "SearchUI" }, cancellationToken).ConfigureAwait(false);
+        //
+        // SearchUI is the process name the original action killed. It does
+        // not exist on Windows 11, where the search host is SearchHost.
+        // await execution.TryRunAsync(new ProcessKillOperation { Name = "SearchUI" }, cancellationToken).ConfigureAwait(false);
+        await execution.TryRunAsync(new ProcessKillOperation { Name = "SearchHost" }, cancellationToken).ConfigureAwait(false);
     }
 }
