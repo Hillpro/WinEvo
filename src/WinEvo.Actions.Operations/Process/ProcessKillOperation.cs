@@ -28,8 +28,7 @@ public sealed class ProcessKillOperation : ActionOperation
                 using var process = Process.GetProcessById(pid);
                 process.Kill(entireProcessTree: true);
                 process.WaitForExit(5_000);
-                context.Log($"killed pid {pid}");
-                return Task.FromResult(OperationResult.Ok("killed 1 process(es)"));
+                return Task.FromResult(OperationResult.Ok($"killed pid {pid}"));
             }
 
             if (string.IsNullOrWhiteSpace(Name))
@@ -54,13 +53,11 @@ public sealed class ProcessKillOperation : ActionOperation
                     process.Dispose();
                 }
             }
-            context.Log($"killed {killed} process(es) named '{Name}'");
-            return Task.FromResult(OperationResult.Ok($"killed {killed} process(es)"));
+            return Task.FromResult(OperationResult.Ok($"killed {killed} process(es) named '{Name}'"));
         }
         catch (ArgumentException)
         {
             // GetProcessById throws when the pid is not running; treat as success (nothing to kill).
-            context.Log("target process not running");
             return Task.FromResult(OperationResult.Ok("process not running"));
         }
         catch (Exception ex)

@@ -76,7 +76,7 @@ public sealed class RegistrySetOperationTests : IDisposable
         var result = await RegistrySetOperation.Dword(_fullPath, "V", 1)
             .ExecuteAsync(OperationTestContext.Empty(), TestContext.Current.CancellationToken);
 
-        Assert.Equal($"HKCU\\{_sandboxSubkey}\\V = 1", result.Message);
+        Assert.Equal($"HKCU\\{_sandboxSubkey}\\V = 1 (DWord)", result.Message);
     }
 
     [Fact]

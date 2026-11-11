@@ -105,17 +105,21 @@
                             <TextBlock
                                 Text="{x:Bind ViewModel.Detail.Status, Mode=OneWay}"
                                 TextWrapping="Wrap" />
-                            <Border
-                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                CornerRadius="4"
-                                Padding="12"
-                                Visibility="{x:Bind ResultDetailVisibility(ViewModel.Detail), Mode=OneWay}">
+                            <!-- The agent's step-by-step account is technical,
+                                 so it stays folded until the user asks for it. -->
+                            <Expander
+                                x:Uid="ResultDetailsExpander"
+                                Header="Details"
+                                IsExpanded="False"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Visibility="{x:Bind ResultDetailVisibility(ViewModel.Detail.ResultDetail), Mode=OneWay, FallbackValue=Collapsed}">
                                 <TextBlock
                                     Text="{x:Bind ViewModel.Detail.ResultDetail, Mode=OneWay}"
                                     FontFamily="Consolas, Cascadia Mono, monospace"
                                     FontSize="12"
                                     TextWrapping="Wrap" />
-                            </Border>
+                            </Expander>
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>

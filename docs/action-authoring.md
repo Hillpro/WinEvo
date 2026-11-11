@@ -154,7 +154,7 @@ Operations are the trusted-code boundary: this is where review is strictest.
 
 1. Open an issue describing the need.
 2. Add a `sealed class` deriving from `ActionOperation` in `WinEvo.Actions.Operations`. Give it an `Id` (the name shown in step results) and typed inputs: `required` init properties, or factories when the inputs must agree with each other, as in `RegistrySetOperation`.
-3. Implement `ExecuteAsync`. Return `OperationResult.Ok(...)` or `OperationResult.Fail(...)`; catch what the operation can meaningfully explain, such as access denied.
+3. Implement `ExecuteAsync`. Return `OperationResult.Ok(...)` or `OperationResult.Fail(...)`, whose message says what happened; catch what the operation can meaningfully explain, such as access denied. Use `context.Log` only for what that message does not say, such as the command line started or an item that could not be handled: the window shows the message and the log lines together.
 4. Add tests that exercise it against a sandbox: a throwaway key under `HKCU\Software\WinEvo.Tests.<guid>`, a temporary folder.
 
 ## Not implemented yet

@@ -44,12 +44,9 @@ public sealed class RegistryDeleteOperation : ActionOperation
 
                 using var key = root.OpenSubKey(subkeyPath, writable: true);
                 if (key is null)
-                {
-                    context.Log($"key {hiveName}\\{subkeyPath} not present; nothing to delete");
-                    return Task.FromResult(OperationResult.Ok($"{hiveName}\\{subkeyPath}\\{ValueName} already absent"));
-                }
+                    return Task.FromResult(OperationResult.Ok($"key {hiveName}\\{subkeyPath} not present, so {ValueName} is already absent"));
+
                 key.DeleteValue(ValueName, throwOnMissingValue: false);
-                context.Log($"deleted value {hiveName}\\{subkeyPath}\\{ValueName}");
                 return Task.FromResult(OperationResult.Ok($"{hiveName}\\{subkeyPath}\\{ValueName} deleted"));
             }
 
@@ -57,7 +54,6 @@ public sealed class RegistryDeleteOperation : ActionOperation
                 return Task.FromResult(OperationResult.Fail($"refusing to delete hive root '{hiveName}'"));
 
             root.DeleteSubKeyTree(subkeyPath, throwOnMissingSubKey: false);
-            context.Log($"deleted key tree {hiveName}\\{subkeyPath}");
             return Task.FromResult(OperationResult.Ok($"{hiveName}\\{subkeyPath} deleted"));
         }
         catch (UnauthorizedAccessException ex)

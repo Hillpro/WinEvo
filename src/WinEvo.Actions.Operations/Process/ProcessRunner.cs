@@ -64,8 +64,6 @@ internal static class ProcessRunner
             }
 
             var exit = process.ExitCode;
-            context.Log($"exit code {exit}");
-
             return exit == 0
                 ? OperationResult.Ok($"exit 0 ({stdout.Length} bytes stdout)")
                 : OperationResult.Fail($"exit {exit}", stderr.ToString().Trim());

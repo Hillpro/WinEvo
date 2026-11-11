@@ -24,7 +24,6 @@ public sealed class DelayOperation : ActionOperation
         try
         {
             await Task.Delay(Duration, cancellationToken).ConfigureAwait(false);
-            context.Log($"waited {Duration.TotalSeconds}s");
             return OperationResult.Ok($"waited {Duration.TotalSeconds}s");
         }
         catch (OperationCanceledException)

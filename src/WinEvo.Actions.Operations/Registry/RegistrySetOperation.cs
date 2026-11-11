@@ -62,8 +62,7 @@ public sealed class RegistrySetOperation : ActionOperation
             key.SetValue(ValueName, _data, Kind);
 
             var written = _data is string[] lines ? string.Join(", ", lines) : _data;
-            context.Log($"set {hiveName}\\{subkeyPath}\\{ValueName} = {written} ({Kind})");
-            return Task.FromResult(OperationResult.Ok($"{hiveName}\\{subkeyPath}\\{ValueName} = {written}"));
+            return Task.FromResult(OperationResult.Ok($"{hiveName}\\{subkeyPath}\\{ValueName} = {written} ({Kind})"));
         }
         catch (UnauthorizedAccessException ex)
         {

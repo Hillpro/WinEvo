@@ -32,6 +32,11 @@ public sealed partial class MainWindow : Window
     public Visibility ElevationVisibility(ActionDetailViewModel? detail)
         => detail?.Item.RequiresElevation == true ? Visibility.Visible : Visibility.Collapsed;
 
-    public Visibility ResultDetailVisibility(ActionDetailViewModel? detail)
-        => string.IsNullOrEmpty(detail?.ResultDetail) ? Visibility.Collapsed : Visibility.Visible;
+    /// <summary>
+    /// Takes the result text itself, not the detail view model: x:Bind
+    /// re-evaluates a function only when one of its arguments changes, and the
+    /// text arrives after the view model is shown.
+    /// </summary>
+    public Visibility ResultDetailVisibility(string? resultDetail)
+        => string.IsNullOrEmpty(resultDetail) ? Visibility.Collapsed : Visibility.Visible;
 }
