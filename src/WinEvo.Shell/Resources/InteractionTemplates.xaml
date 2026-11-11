@@ -53,6 +53,8 @@
                     <TextBlock Text="{Binding SwitchInput.DisplayName}" />
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <ToggleSwitch
+                            x:Uid="OnOffSwitch"
+                            OnContent="On" OffContent="Off"
                             IsOn="{Binding IsOn, Mode=TwoWay}"
                             IsEnabled="{Binding IsInteractive}" />
                         <ProgressRing

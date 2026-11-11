@@ -107,6 +107,27 @@ public partial class ShellTextResourcesTests
         Assert.Empty(used.Except(declared));
     }
 
+    // ------------------------------------------------------------ translated languages
+
+    [Fact]
+    public void Translated_languages_are_the_window_translations()
+    {
+        var windowTranslations = Directory.GetDirectories(Path.Combine(RepositoryRoot(), "src", "WinEvo.Shell", "Strings"))
+            .Select(Path.GetFileName);
+
+        Assert.Equal(WindowLanguage.Translated.Order(), windowTranslations.Order());
+    }
+
+    [Fact]
+    public void Every_translated_language_has_view_model_and_action_text()
+    {
+        Assert.All(WindowLanguage.Translated.Where(language => language != WindowLanguage.Fallback), language =>
+        {
+            Assert.True(File.Exists(Path.Combine(RepositoryRoot(), "src", "WinEvo.Shell.Core", $"Strings.{language}.resx")), $"no view-model text in '{language}'");
+            Assert.True(File.Exists(Path.Combine(RepositoryRoot(), "src", "WinEvo.Actions", $"Strings.{language}.resx")), $"no action text in '{language}'");
+        });
+    }
+
     // ------------------------------------------------------------ helpers
 
     private static Dictionary<string, string> ViewModelStrings(CultureInfo culture)

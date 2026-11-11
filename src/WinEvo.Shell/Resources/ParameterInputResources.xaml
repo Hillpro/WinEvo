@@ -58,7 +58,10 @@
             <DataTemplate>
                 <StackPanel Spacing="4" Margin="0,0,0,12">
                     <TextBlock Text="{Binding DisplayName}" />
-                    <ToggleSwitch IsOn="{Binding Value, Mode=TwoWay}" />
+                    <ToggleSwitch
+                        x:Uid="OnOffSwitch"
+                        OnContent="On" OffContent="Off"
+                        IsOn="{Binding Value, Mode=TwoWay}" />
                     <TextBlock
                         Text="{Binding DisplayDescription}"
                         Visibility="{Binding HasDescription, Converter={StaticResource BoolToVisibility}}"

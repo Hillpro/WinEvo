@@ -50,33 +50,53 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Makes every piece of text in the window follow the same language: the
-    /// user's Windows display language, <see cref="CultureInfo.CurrentUICulture"/>.
-    /// The <c>.resx</c> text (actions, view models) uses it natively. The XAML
-    /// text (<c>.resw</c>) is resolved by a separate Windows component that, in
-    /// an unpackaged app, looks at the system display language instead, so it
-    /// is told explicitly which language to use.
+    /// Makes every piece of text in the window follow one language: the
+    /// translation matching the user's Windows display language, or English.
+    /// The <c>.resx</c> text (actions, view models) follows
+    /// <see cref="CultureInfo.CurrentUICulture"/>. The XAML text (<c>.resw</c>)
+    /// is resolved by a separate Windows component that, in an unpackaged app,
+    /// looks at the system display language instead, so it is told explicitly
+    /// which language to use. That override only puts a language first in the
+    /// list the XAML text is matched against, so it must be a translated one:
+    /// with any other, a language further down the user's list could win for
+    /// the XAML while the <c>.resx</c> text falls back to English.
     /// </summary>
     private static void UseOneDisplayLanguage()
     {
-        // Lets a developer or a tester see another language without changing
-        // the Windows display language, e.g. WINEVO_LANGUAGE=fr.
-        var requested = Environment.GetEnvironmentVariable(LanguageOverrideVariable);
-        if (!string.IsNullOrWhiteSpace(requested))
-        {
-            try
-            {
-                var culture = CultureInfo.GetCultureInfo(requested);
-                CultureInfo.CurrentUICulture = culture;
-                CultureInfo.DefaultThreadCurrentUICulture = culture;
-            }
-            catch (CultureNotFoundException)
-            {
-                ShellLog.Write($"ignoring {LanguageOverrideVariable}='{requested}': not a known language");
-            }
-        }
+        var language = WindowLanguage.Choose(RequestedLanguage());
+        CultureInfo.CurrentUICulture = language;
+        CultureInfo.DefaultThreadCurrentUICulture = language;
 
-        ApplicationLanguages.PrimaryLanguageOverride = CultureInfo.CurrentUICulture.Name;
+        try
+        {
+            ApplicationLanguages.PrimaryLanguageOverride = language.Name;
+        }
+        catch (Exception ex)
+        {
+            ShellLog.WriteException($"could not set the XAML language to '{language.Name}'", ex);
+        }
+    }
+
+    /// <summary>
+    /// The Windows display language, unless <c>WINEVO_LANGUAGE</c> names
+    /// another: it lets a developer or a tester see another language without
+    /// changing Windows, e.g. <c>WINEVO_LANGUAGE=fr</c>.
+    /// </summary>
+    private static CultureInfo RequestedLanguage()
+    {
+        var requested = Environment.GetEnvironmentVariable(LanguageOverrideVariable);
+        if (string.IsNullOrWhiteSpace(requested))
+            return CultureInfo.CurrentUICulture;
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(requested);
+        }
+        catch (CultureNotFoundException)
+        {
+            ShellLog.Write($"ignoring {LanguageOverrideVariable}='{requested}': not a known language");
+            return CultureInfo.CurrentUICulture;
+        }
     }
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)

@@ -33,6 +33,12 @@
   <data name="DrivePicker.PlaceholderText" xml:space="preserve">
     <value>Aucun disque disponible</value>
   </data>
+  <data name="OnOffSwitch.OnContent" xml:space="preserve">
+    <value>Activé</value>
+  </data>
+  <data name="OnOffSwitch.OffContent" xml:space="preserve">
+    <value>Désactivé</value>
+  </data>
   <data name="AboutDialog.Title" xml:space="preserve">
     <value>À propos de WinEvo</value>
   </data>
