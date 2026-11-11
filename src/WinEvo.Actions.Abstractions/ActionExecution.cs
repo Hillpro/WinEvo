@@ -45,26 +45,28 @@ public sealed class ActionExecution
     /// </summary>
     public async Task RunAsync(ActionOperation operation, CancellationToken cancellationToken)
     {
-        var result = await ExecuteAndRecordAsync(operation, cancellationToken).ConfigureAwait(false);
+        var result = await ExecuteAndRecordAsync(operation, toleratesFailure: false, cancellationToken).ConfigureAwait(false);
         if (!result.Success)
             throw new ActionStepFailedException(operation.Id, result);
     }
 
     /// <summary>
     /// Runs an operation whose failure the action tolerates: the action
-    /// carries on. The failure is still recorded, and the execution as a
-    /// whole is reported as failed.
+    /// carries on, and the execution can still succeed. A failure is recorded
+    /// as tolerated, and the Shell tells the user that part of the action did
+    /// not work.
     /// </summary>
     /// <returns>Whether the operation succeeded.</returns>
     public async Task<bool> TryRunAsync(ActionOperation operation, CancellationToken cancellationToken)
     {
-        var result = await ExecuteAndRecordAsync(operation, cancellationToken).ConfigureAwait(false);
+        var result = await ExecuteAndRecordAsync(operation, toleratesFailure: true, cancellationToken).ConfigureAwait(false);
         return result.Success;
     }
 
     public void Log(string line) => _logLines.Add(line);
 
-    private async Task<OperationResult> ExecuteAndRecordAsync(ActionOperation operation, CancellationToken cancellationToken)
+    private async Task<OperationResult> ExecuteAndRecordAsync(
+        ActionOperation operation, bool toleratesFailure, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -80,7 +82,7 @@ public sealed class ActionExecution
             result = OperationResult.Fail(ex.GetType().Name, ex.Message);
         }
 
-        _steps.Add(new ActionStepRecord(operation.Id, result));
+        _steps.Add(new ActionStepRecord(operation.Id, result, FailureTolerated: toleratesFailure && !result.Success));
         return result;
     }
 
@@ -97,4 +99,9 @@ public sealed class ActionExecution
 }
 
 /// <summary>An operation an action ran, and how it ended.</summary>
-public sealed record ActionStepRecord(string OperationId, OperationResult Result);
+/// <param name="FailureTolerated">
+/// The operation failed and the action carried on without it, because it ran
+/// it through <see cref="ActionExecution.TryRunAsync"/>. Such a failure does
+/// not fail the execution.
+/// </param>
+public sealed record ActionStepRecord(string OperationId, OperationResult Result, bool FailureTolerated);

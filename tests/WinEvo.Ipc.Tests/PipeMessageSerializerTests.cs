@@ -82,19 +82,22 @@ public class PipeMessageSerializerTests
         {
             RequestId = "r4",
             Success = false,
-            Message = "failed at step 1 of 2",
+            Message = "failed at step 1 of 3",
             StepResults =
             [
                 new StepResult { Operation = "registry-set", Success = false, Error = "access denied" },
                 new StepResult { Operation = "delay", Success = true, Message = "waited" },
+                new StepResult { Operation = "process-kill", Success = false, Error = "denied", FailureTolerated = true },
             ],
             Log = ["line one", "line two"],
         });
 
         Assert.False(result.Success);
-        Assert.Equal(2, result.StepResults.Count);
+        Assert.Equal(3, result.StepResults.Count);
         Assert.Equal("registry-set", result.StepResults[0].Operation);
         Assert.Equal("access denied", result.StepResults[0].Error);
+        Assert.False(result.StepResults[0].FailureTolerated);
+        Assert.True(result.StepResults[2].FailureTolerated);
         Assert.Equal(["line one", "line two"], result.Log);
     }
 

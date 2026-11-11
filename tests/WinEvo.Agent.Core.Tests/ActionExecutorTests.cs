@@ -36,8 +36,10 @@ public class ActionExecutorTests
 
         Assert.True(response.StepResults[0].Success);
         Assert.Equal("first ok", response.StepResults[0].Message);
+        Assert.False(response.StepResults[0].FailureTolerated);
         Assert.False(response.StepResults[1].Success);
         Assert.Equal("second failed", response.StepResults[1].Error);
+        Assert.True(response.StepResults[1].FailureTolerated);
     }
 
     [Fact]
@@ -56,7 +58,7 @@ public class ActionExecutorTests
     }
 
     [Fact]
-    public async Task Tolerated_failure_lets_later_steps_run_but_still_fails_the_execution()
+    public async Task Tolerated_failure_lets_later_steps_run_and_the_execution_succeed()
     {
         var response = await Run(async (execution, ct) =>
         {
@@ -64,9 +66,35 @@ public class ActionExecutorTests
             await execution.RunAsync(ScriptedOperation.Succeeding("second"), ct);
         });
 
-        Assert.False(response.Success);
-        Assert.Equal("failed at step 1 of 2", response.Message);
+        Assert.True(response.Success);
+        Assert.Equal("completed 2 step(s), 1 failed without stopping the action", response.Message);
         Assert.True(response.StepResults[1].Success);
+    }
+
+    [Fact]
+    public async Task Failure_after_a_tolerated_one_names_the_step_that_stopped_the_action()
+    {
+        var response = await Run(async (execution, ct) =>
+        {
+            await execution.TryRunAsync(ScriptedOperation.Failing("first"), ct);
+            await execution.RunAsync(ScriptedOperation.Failing("second"), ct);
+        });
+
+        Assert.False(response.Success);
+        Assert.Equal("failed at step 2 of 2", response.Message);
+    }
+
+    [Fact]
+    public async Task Crash_after_a_tolerated_failure_fails_the_execution()
+    {
+        var response = await Run(async (execution, ct) =>
+        {
+            await execution.TryRunAsync(ScriptedOperation.Failing("first"), ct);
+            throw new InvalidOperationException("kaboom");
+        });
+
+        Assert.False(response.Success);
+        Assert.Equal("stopped after 1 step(s): kaboom", response.Message);
     }
 
     [Fact]
@@ -119,10 +147,11 @@ public class ActionExecutorTests
         var received = Assert.IsType<ExecutionResponse>(
             PipeMessageSerializer.Deserialize(PipeMessageSerializer.Serialize(response)));
 
-        Assert.False(received.Success);
+        Assert.True(received.Success);
         Assert.Equal(response.Message, received.Message);
         Assert.Equal(["first", "second"], received.StepResults.Select(s => s.Operation));
         Assert.Equal("second failed", received.StepResults[1].Error);
+        Assert.True(received.StepResults[1].FailureTolerated);
         Assert.Equal(["starting"], received.Log);
     }
 

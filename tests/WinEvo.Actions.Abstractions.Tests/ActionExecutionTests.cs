@@ -25,10 +25,11 @@ public class ActionExecutionTests
         Assert.Equal("first", thrown.OperationId);
         var step = Assert.Single(execution.Steps);
         Assert.False(step.Result.Success);
+        Assert.False(step.FailureTolerated);
     }
 
     [Fact]
-    public async Task TryRunAsync_records_the_failure_and_lets_the_action_continue()
+    public async Task TryRunAsync_records_the_failure_as_tolerated_and_lets_the_action_continue()
     {
         var execution = NewExecution();
 
@@ -39,6 +40,8 @@ public class ActionExecutionTests
         Assert.True(secondSucceeded);
         Assert.Equal(["first", "second"], execution.Steps.Select(s => s.OperationId));
         Assert.False(execution.Steps[0].Result.Success);
+        Assert.True(execution.Steps[0].FailureTolerated);
+        Assert.False(execution.Steps[1].FailureTolerated);
     }
 
     [Fact]

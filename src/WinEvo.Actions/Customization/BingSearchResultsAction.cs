@@ -46,14 +46,14 @@ public sealed class BingSearchResultsAction : ToggleActionDefinition
         await execution.RunAsync(RegistrySetOperation.Dword(SearchKey, CortanaConsentValue, enabled), cancellationToken).ConfigureAwait(false);
 
         // The search host picks the new values up on its next start. The
-        // values are already written at this point, so the action carries on
-        // if the restart fails. The run is still reported as failed in that
-        // case: a tolerated failure does not stop an action, but it does
-        // fail the execution.
+        // values are already written at this point, so a failed restart does
+        // not undo the change: the run succeeds, and the user is told that
+        // part of it did not work.
         //
         // SearchUI is the process name the original action killed. It does
         // not exist on Windows 11, where the search host is SearchHost.
-        // await execution.TryRunAsync(new ProcessKillOperation { Name = "SearchUI" }, cancellationToken).ConfigureAwait(false);
+        // Killing a process that is not running succeeds, so both are tried.
+        await execution.TryRunAsync(new ProcessKillOperation { Name = "SearchUI" }, cancellationToken).ConfigureAwait(false);
         await execution.TryRunAsync(new ProcessKillOperation { Name = "SearchHost" }, cancellationToken).ConfigureAwait(false);
     }
 }

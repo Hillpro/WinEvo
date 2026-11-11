@@ -106,7 +106,7 @@ Inside `ExecuteAsync` (or `ApplyAsync`), every operation goes through the `Actio
 | Call | Use it when |
 |---|---|
 | `await execution.RunAsync(operation, ct)` | The action cannot continue if this fails. A failure ends the action there. |
-| `await execution.TryRunAsync(operation, ct)` | A failure is acceptable. It returns `false`, and the action carries on. The execution is still reported as failed overall. |
+| `await execution.TryRunAsync(operation, ct)` | A failure is acceptable. It returns `false`, and the action carries on. The execution still succeeds, and the window tells the user that part of it did not work. |
 | `execution.Log(line)` | You want a line in the result panel that is not tied to an operation. |
 
 Between operations you write ordinary C#: conditions, loops, values computed from parameters.

@@ -12,13 +12,20 @@ public static class ExecutionOutcomeText
 {
     public static string For(ExecutionResponse response, CultureInfo culture)
     {
-        if (response.Success)
-            return ViewModelText.Get("Status_Succeeded", culture);
-
         var steps = response.StepResults;
+        if (response.Success)
+        {
+            // A step the action could do without failed: the change is made,
+            // but the user is told that part of it did not work.
+            return steps.Any(step => step.FailureTolerated)
+                ? ViewModelText.Get("Status_SucceededWithFailedPart", culture)
+                : ViewModelText.Get("Status_Succeeded", culture);
+        }
+
+        // Names the step that stopped the action, not an earlier tolerated one.
         for (var index = 0; index < steps.Count; index++)
         {
-            if (!steps[index].Success)
+            if (!steps[index].Success && !steps[index].FailureTolerated)
                 return ViewModelText.Format("Status_FailedAtStep", culture, index + 1, steps.Count);
         }
 

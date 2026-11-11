@@ -27,6 +27,9 @@
   <data name="Status_Succeeded" xml:space="preserve">
     <value>Done.</value>
   </data>
+  <data name="Status_SucceededWithFailedPart" xml:space="preserve">
+    <value>Done, but one part did not work. See the details below.</value>
+  </data>
   <data name="Status_FailedAtStep" xml:space="preserve">
     <value>Failed at step {0} of {1}.</value>
   </data>

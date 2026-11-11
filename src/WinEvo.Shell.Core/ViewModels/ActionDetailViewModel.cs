@@ -127,8 +127,8 @@ public sealed partial class ActionDetailViewModel : ObservableObject, IDisposabl
                     detail.AppendLine(response.Message);
                 foreach (var step in response.StepResults)
                 {
-                    var ok = step.Success ? "OK" : "FAIL";
-                    detail.AppendLine($"[{ok}] {step.Operation}"
+                    var outcome = step.Success ? "OK" : step.FailureTolerated ? "WARN" : "FAIL";
+                    detail.AppendLine($"[{outcome}] {step.Operation}"
                         + (step.Message is null ? "" : $" — {step.Message}")
                         + (step.Error is null ? "" : $" — {step.Error}"));
                 }

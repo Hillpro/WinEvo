@@ -87,6 +87,9 @@ public sealed class StepResult
     public required bool Success { get; init; }
     public string? Message { get; init; }
     public string? Error { get; init; }
+
+    /// <summary>The step failed and the action carried on without it. Such a failure does not fail the execution.</summary>
+    public bool FailureTolerated { get; init; }
 }
 
 public sealed class ErrorResponse : PipeMessage

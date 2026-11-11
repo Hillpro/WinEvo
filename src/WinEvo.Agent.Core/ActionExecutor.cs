@@ -43,13 +43,14 @@ public static class ActionExecutor
                 Success = step.Result.Success,
                 Message = step.Result.Message,
                 Error = step.Result.Error,
+                FailureTolerated = step.FailureTolerated,
             })
             .ToList();
 
         return new ExecutionResponse
         {
             RequestId = requestId,
-            Success = crash is null && stepResults.All(s => s.Success),
+            Success = crash is null && stepResults.All(s => s.Success || s.FailureTolerated),
             Message = Summarize(stepResults, crash),
             Error = crash is null ? null : crash.GetType().Name,
             StepResults = stepResults,
@@ -62,10 +63,14 @@ public static class ActionExecutor
         if (crash is not null)
             return $"stopped after {stepResults.Count} step(s): {crash.Message}";
 
-        var firstFailure = stepResults.FindIndex(s => !s.Success);
-        return firstFailure < 0
+        var stoppingFailure = stepResults.FindIndex(s => !s.Success && !s.FailureTolerated);
+        if (stoppingFailure >= 0)
+            return $"failed at step {stoppingFailure + 1} of {stepResults.Count}";
+
+        var toleratedFailures = stepResults.Count(s => s.FailureTolerated);
+        return toleratedFailures == 0
             ? $"completed {stepResults.Count} step(s)"
-            : $"failed at step {firstFailure + 1} of {stepResults.Count}";
+            : $"completed {stepResults.Count} step(s), {toleratedFailures} failed without stopping the action";
     }
 
     /// <summary>

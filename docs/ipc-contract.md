@@ -33,7 +33,7 @@ Each message is one frame: a 4-byte big-endian length, then a UTF-8 JSON object 
 | Request (`type`) | Carries | Response (`type`) |
 |---|---|---|
 | `handshake` | `clientKind`, `clientVersion`, `protocolVersion` | `handshake-response`: `agentVersion`, `agentProtocolVersion` |
-| `execute` | `actionId`, `parameters` (values keyed by parameter id) | `execution-response`: `success`, `message`, `error`, `stepResults`, `log` |
+| `execute` | `actionId`, `parameters` (values keyed by parameter id) | `execution-response`: `success`, `message`, `error`, `stepResults` (each with `operation`, `success`, `message`, `error`, `failureTolerated`), `log` |
 | `read-state` | `actionId` | `state-response`: `values` (live values keyed by parameter id; a parameter with no readable state is absent) |
 
 Any request can instead be answered by `error` (`message`). An `execute` for an id the agent does not have, or for an action that requires elevation while the agent is not elevated, is answered by an `execution-response` with `success: false`.
